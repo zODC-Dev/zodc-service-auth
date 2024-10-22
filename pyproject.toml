@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "zodc-be"
+version = "0.1.0"
+description = "Backend side for zODC"
+authors = ["vphoa342 <vphoa34@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.2"
+uvicorn = "^0.32.0"
+SQLAlchemy = "^2.0.36"
+alembic = "^1.13.3"
+pydantic = "^2.9.2"
+loguru = "^0.7.2"
+asyncpg = "^0.30.0"
+pydantic-settings = "^2.6.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
