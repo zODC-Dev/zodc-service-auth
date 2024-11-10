@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     # Port
     PORT: int = 8000
 
+    # Azure AD settings
+    AZURE_AD_TENANT_ID: str
+    AZURE_AD_CLIENT_ID: str
+    AZURE_AD_CLIENT_SECRET: str
+    AZURE_AD_REDIRECT_URI: str
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
