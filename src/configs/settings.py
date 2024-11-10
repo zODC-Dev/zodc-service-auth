@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
 
+    # Port
+    PORT: int = 8000
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
