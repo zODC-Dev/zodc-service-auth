@@ -1,30 +1,28 @@
-from ..repositories.task_repository import TaskRepository
+from ..repositories.task_repository import task_repository
 from ..schemas.task import TaskCreate, TaskUpdate
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 class TaskService:
-    def __init__(self, db: Session):
-        self.repository = TaskRepository(db)
+    async def create_task(self, db: AsyncSession, task: TaskCreate):
+        return await task_repository.create(db, task)
 
-    def create_task(self, task: TaskCreate):
-        return self.repository.create(task)
+    async def get_task(self, db: AsyncSession, task_id: int):
+        return await task_repository.get(db, task_id)
 
-    def get_task(self, task_id: int):
-        return self.repository.get(task_id)
+    async def get_tasks(self, db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await task_repository.get_all(db, skip, limit)
 
-    def get_tasks(self, skip: int = 0, limit: int = 100):
-        return self.repository.get_all(skip, limit)
+    async def update_task(self, db: AsyncSession, task_id: int, task: TaskUpdate):
+        return await task_repository.update(db, task_id, task)
 
-    def update_task(self, task_id: int, task: TaskUpdate):
-        return self.repository.update(task_id, task)
+    async def delete_task(self, db: AsyncSession, task_id: int):
+        return await task_repository.delete(db, task_id)
 
-    def delete_task(self, task_id: int):
-        return self.repository.delete(task_id)
-
-    # Add any additional business logic methods here
-    def mark_task_as_completed(self, task_id: int):
-        task = self.repository.get(task_id)
+    async def mark_task_as_completed(self, db: AsyncSession, task_id: int):
+        task = await task_repository.get(db, task_id)
         if task:
             task.is_completed = True
-            return self.repository.update(task_id, TaskUpdate(is_completed=True))
+            return await task_repository.update(db, task_id, TaskUpdate(is_completed=True))
         return None
+
+task_service = TaskService()

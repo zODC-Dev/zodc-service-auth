@@ -17,7 +17,7 @@ class TaskUpdate(TaskBase):
 class Task(TaskBase):
     id: int
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         orm_mode = True

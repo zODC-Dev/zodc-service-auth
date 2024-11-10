@@ -1,39 +1,45 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.configs.database import Base
 from src.configs.logger import log
+from sqlalchemy.sql import select
 
 class BaseRepository:
-    def __init__(self, db: Session, model: Base):
-        self.db = db
+    def __init__(self, model: Base):
         self.model = model
 
-    def create(self, obj_in):
+    async def create(self, db: AsyncSession, obj_in):
         db_obj = self.model(**obj_in.dict())
-        self.db.add(db_obj)
-        self.db.commit()
-        self.db.refresh(db_obj)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         log.debug(f"Created {self.model.__name__} with id: {db_obj.id}")
         return db_obj
 
-    def get(self, id: int):
-        return self.db.query(self.model).filter(self.model.id == id).first()
+    async def get(self, db: AsyncSession, id: int):
+        result = await db.execute(
+            select(self.model).filter(self.model.id == id)
+        )
+        return result.scalar_one_or_none()
 
-    def get_all(self, skip: int = 0, limit: int = 100):
-        return self.db.query(self.model).offset(skip).limit(limit).all()
+    async def get_all(self, db: AsyncSession, skip: int = 0, limit: int = 100):
+        result = await db.execute(
+            select(self.model).offset(skip).limit(limit)
+        )
+        return result.scalars().all()
 
-    def update(self, id: int, obj_in):
-        db_obj = self.db.query(self.model).filter(self.model.id == id).first()
+    async def update(self, db: AsyncSession, id: int, obj_in):
+        db_obj = await self.get(db, id)
         if db_obj:
             obj_data = obj_in.dict(exclude_unset=True)
             for key, value in obj_data.items():
                 setattr(db_obj, key, value)
-            self.db.commit()
-            self.db.refresh(db_obj)
+            await db.commit()
+            await db.refresh(db_obj)
         return db_obj
 
-    def delete(self, id: int):
-        db_obj = self.db.query(self.model).filter(self.model.id == id).first()
+    async def delete(self, db: AsyncSession, id: int):
+        db_obj = await self.get(db, id)
         if db_obj:
-            self.db.delete(db_obj)
-            self.db.commit()
+            await db.delete(db_obj)
+            await db.commit()
         return db_obj
