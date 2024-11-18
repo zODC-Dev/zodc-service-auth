@@ -10,11 +10,15 @@ from src.configs.logger import logger
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@router.post("/auth/login")
+@router.post("/login")
 async def login(payload: LoginPayload, db: AsyncSession = Depends(get_db)):
     logger.info(payload)
     return await auth_controller.login(payload=payload, db=db)
 
-@router.post("/auth/login/sso")
-async def login_by_sso(az_access_token: str = None, db: AsyncSession = Depends(get_db)):
-    return await auth_controller.login_by_sso(az_access_token=az_access_token, db=db)
+@router.post("/microsoft")
+async def login_by_sso():
+    return await auth_controller.login_by_sso()
+
+@router.get("/microsoft/callback")
+async def login_by_sso_callback(code: str = None, db: AsyncSession = Depends(get_db)):
+    return await auth_controller.login_by_sso_callback(az_access_token=code, db=db)

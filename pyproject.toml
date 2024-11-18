@@ -19,6 +19,7 @@ passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pyjwt = "^2.9.0"
 requests = "^2.32.3"
 ramda = "^0.7.6"
+aiohttp = "^3.11.2"
 
 
 [build-system]

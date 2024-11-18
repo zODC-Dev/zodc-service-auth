@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     AZURE_AD_CLIENT_ID: str
     AZURE_AD_CLIENT_SECRET: str
     AZURE_AD_REDIRECT_URI: str
+    AZURE_AD_OBJECT_ID: str
+    AZURE_AD_CLIENT_SECRET_ID: str
 
     class Config:
         env_file = ".env"

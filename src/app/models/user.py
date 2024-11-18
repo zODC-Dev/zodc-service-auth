@@ -5,6 +5,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String, unique=True, index=True)
-    password = Column(String(60))
+    password = Column(String(60), nullable=True)
     full_name = Column(String(255))
+    microsoft_id = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)

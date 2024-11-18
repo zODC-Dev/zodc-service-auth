@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from ..models.user import User
-from ..schemas.user import CreateUserPayload
+from ..schemas.user import CreateUserPayload, CreateUserPayloadSSO
 from src.utils.brcypt_util import BcryptUtil
 from sqlalchemy.sql.expression import select
 
@@ -12,13 +12,25 @@ class UserRepository:
 
     async def create_user(self, payload: CreateUserPayload,  db: AsyncSession) -> User:
         # check if user already exists
-        user = await UserRepository.get_user_by_email(payload.email, db)
+        user = await self.get_user_by_email(email=payload.email, db=db)
         if user:
             raise Exception("User already exists")
 
         # create user
         hashed_password = BcryptUtil.hash_password(payload.password)
         user = User(email=payload.email, full_name=payload.full_name, password=hashed_password)
+        db.add(user)
+        await db.commit()
+        return user
+    
+    async def create_user_by_sso(self, payload: CreateUserPayloadSSO, db: AsyncSession) -> User:
+        # check if user already exists
+        user = await self.get_user_by_email(email=payload.email, db=db)
+        if user:
+            raise Exception("User already exists")
+
+        # create user
+        user = User(email=payload.email, full_name=payload.full_name, microsoft_id=payload.microsoft_id)
         db.add(user)
         await db.commit()
         return user
