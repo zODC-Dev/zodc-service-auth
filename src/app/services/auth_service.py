@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 import jwt
 from fastapi import HTTPException
 from src.configs.settings import settings
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta, datetime
 import requests
 import ramda as R
@@ -12,7 +13,7 @@ import ramda as R
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AuthService:
-    async def login(payload: LoginPayload, db):
+    async def login(self, payload: LoginPayload, db: AsyncSession):
         user = await user_repository.get_user_by_email(email=payload.email, db=db)
         if not user or not pwd_context.verify(payload.password, user.password):
             return HTTPException(status_code=400, detail="Incorrect email or password")
@@ -23,7 +24,7 @@ class AuthService:
         
         return {"access_token": access_token, "token_type": "bearer"}
 
-    async def login_by_sso(az_access_token: str, db):
+    async def login_by_sso(self, az_access_token: str, db: AsyncSession):
         graph_uri = "https://graph.microsoft.com/"
         tenant_id = settings.AZURE_AD_TENANT_ID
         client_id = settings.AZURE_AD_CLIENT_ID
