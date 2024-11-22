@@ -82,6 +82,7 @@ class AuthService:
 
         # return HTTPException(status_code=400, detail="Invalid access token")
            # Decode the ID Token
+        logger.info(token_data['access_token'])
         id_token = token_data["id_token"]
         decoded_token = jwt.decode(id_token, options={"verify_signature": False})
 
@@ -99,7 +100,7 @@ class AuthService:
         user = await user_repository.get_user_by_email(email=at_email, db=db)
         if not user:
             create_user_payload = CreateUserPayloadSSO(email=at_email, full_name=at_full_name, microsoft_id=at_microsoft_id)
-            user = await user_repository.create_user(payload=create_user_payload, db=db)
+            user = await user_repository.create_user_by_sso(payload=create_user_payload, db=db)
 
         be_access_token = AuthService.create_access_token(data={"sub": at_email}, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
         return {"access_token": be_access_token, "token_type": "bearer"}

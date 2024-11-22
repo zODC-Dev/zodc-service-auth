@@ -9,7 +9,7 @@ from alembic import context
 
 # Add these imports
 from src.configs.database import Base
-from src.app.models import task  # Import all your models here
+from src.app.models import task, user  # Import all your models here
 from src.configs.settings import settings
 
 # this is the Alembic Config object, which provides

@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.sql import func
 from src.configs.database import Base
 class User(Base):
     __tablename__ = "users"
@@ -9,3 +10,5 @@ class User(Base):
     full_name = Column(String(255))
     microsoft_id = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
