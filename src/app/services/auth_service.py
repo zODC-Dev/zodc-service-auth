@@ -2,14 +2,9 @@ from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import HTTPException
 import jwt
-import base64
-import hashlib
-import os
 from aiohttp import ClientSession, ClientError
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from msal import ConfidentialClientApplication
-from azure.identity import AuthorizationCodeCredential 
 
 from src.configs.settings import settings
 from src.configs.logger import logger
@@ -18,7 +13,6 @@ from src.app.repositories.user_repository import user_repository, UserRepository
 from src.app.schemas.auth import LoginPayload, TokenResponse, SSOResponse
 from src.app.schemas.user import CreateUserPayloadSSO
 from src.app.services.token_service import token_service, TokenService
-from src.app.services.graph_service import graph_service
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -26,24 +20,6 @@ class AuthService:
     def __init__(self, user_repository: UserRepository, token_service: TokenService):
         self.user_repository = user_repository
         self.token_service = token_service
-        self.code_verifier = None
-        self.msal_app = ConfidentialClientApplication(
-            client_id=settings.SERVER_AZURE_CLIENT_ID,
-            client_credential=settings.SERVER_AZURE_CLIENT_SECRET,
-            authority=f"https://login.microsoftonline.com/{settings.SERVER_AZURE_TENANT_ID}",
-        )
-
-    async def exchange_code_for_token(self, code: str, code_verifier: str, db: AsyncSession):
-        result = self.msal_app.acquire_token_by_authorization_code(
-            code=code,
-            scopes=["https://graph.microsoft.com/.default"],
-            redirect_uri=settings.SERVER_AZURE_REDIRECT_URI,
-            code_verifier=code_verifier,
-        )
-        if "access_token" in result:
-            user_id = await self.store_token(result, db)
-            return {"access_token": result["access_token"], "user_id": user_id}
-        raise Exception("Token exchange failed")
 
     async def store_token(self, token_response: dict, db: AsyncSession):
         # Store refresh token in the database
@@ -73,17 +49,6 @@ class AuthService:
         common_tenant = "common"
         
         try:
-            # auth_url = (
-            #     f"https://login.microsoftonline.com/{common_tenant}/oauth2/v2.0/authorize"
-            #     f"?client_id={settings.AZURE_AD_CLIENT_ID}"
-            #     f"&response_type=code"
-            #     f"&redirect_uri={settings.AZURE_AD_REDIRECT_URI}"
-            #     f"&response_mode=query"
-            #     f"&scope=openid profile email offline_access"
-            #     f"&state={self._generate_state_token()}"
-            #     f"&code_challenge={code_challenge}"
-            #     f"&code_challenge_method=S256"
-            # )
             auth_url = (
                 f"https://login.microsoftonline.com/{common_tenant}/oauth2/v2.0/authorize"
                 f"?client_id={settings.CLIENT_AZURE_CLIENT_ID}"
@@ -106,37 +71,15 @@ class AuthService:
     async def login_by_sso_callback(self, code: str, state: str, code_verifier: str, db: AsyncSession):
         """Handle Microsoft SSO callback"""
 
-        logger.info("hiasdasd")
         try:
-            logger.info(f"Code: {code}")
             # Exchange code for token
             token_data = await self._exchange_code_for_token(code=code, code_verifier=code_verifier)
-            logger.info(f"Token data: {token_data}")
             
             # Validate and decode token
             user_info = self._validate_microsoft_token(token_data["id_token"])
             
-            # # Verify tenant
-            # if user_info["tid"] != settings.AZURE_AD_TENANT_ID:
-            #     raise AuthException.INVALID_TENANT
-            
             # Create or get user
             user = await self._get_or_create_sso_user(user_info, db)
-
-            # Create Azure credential
-            credential = AuthorizationCodeCredential(
-                tenant_id="common",
-                client_id=settings.AZURE_AD_CLIENT_ID,
-                # client_secret=settings.AZURE_AD_CLIENT_SECRET,
-                authorization_code=code,
-                redirect_uri=settings.AZURE_AD_REDIRECT_URI,
-            )
-            logger.info(f"Credential: {credential}")
-            # token = credential.get_token(' '.join(settings.AZURE_AD_SCOPES))
-            # logger.info(f"Credential: {token.token}")
-
-            # Initialize Graph client
-            await graph_service.initialize(credential)
 
             # Cache Microsoft token in Redis
             await self.token_service._cache_token(
@@ -164,31 +107,17 @@ class AuthService:
             raise HTTPException(status_code=500, detail="Authentication failed")
 
     async def _exchange_code_for_token(self, code: str, code_verifier: str) -> dict:
-        logger.info(f"Code: {code}")
-        logger.info(f"Code verifier: {code_verifier}")
-        logger.info(f"Client ID: {settings.SERVER_AZURE_CLIENT_ID}")
-        logger.info(f"Client secret: {settings.SERVER_AZURE_CLIENT_SECRET}")
-        logger.info(f"Redirect URI: {settings.SERVER_AZURE_REDIRECT_URI}")
         """Exchange authorization code for tokens"""
         async with ClientSession() as session:
             common_tenant = "common"
             async with session.post(
                 f"https://login.microsoftonline.com/{common_tenant}/oauth2/v2.0/token",
-                # data={
-                #     "client_id": settings.AZURE_AD_CLIENT_ID,
-                #     "client_secret": settings.AZURE_AD_CLIENT_SECRET,
-                #     "grant_type": "authorization_code",
-                #     "code": code,
-                #     "redirect_uri": settings.AZURE_AD_REDIRECT_URI,
-                #     "code_verifier": code_verifier,  # Include PKCE verifier here
-                # }
                 data={
                     "client_id": settings.CLIENT_AZURE_CLIENT_ID,
-                    # "client_secret": settings.SERVER_AZURE_CLIENT_SECRET,
                     "grant_type": "authorization_code",
                     "code": code,
                     "redirect_uri": settings.CLIENT_AZURE_REDIRECT_URI,
-                    "code_verifier": code_verifier,  # Include PKCE verifier here
+                    "code_verifier": code_verifier,
                 }
             ) as response:
                 data = await response.json()
@@ -265,14 +194,4 @@ class AuthService:
             algorithm=settings.JWT_ALGORITHM
         )
     
-    # def _generate_code_verifier(self):
-    #     """Generate a secure random code_verifier."""
-    #     return base64.urlsafe_b64encode(os.urandom(64)).rstrip(b"=").decode("utf-8")
-
-    # def _generate_code_challenge(self, code_verifier):
-    #     """Generate a SHA256 code_challenge."""
-    #     digest = hashlib.sha256(code_verifier.encode("utf-8")).digest()
-    #     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("utf-8")
-
-
 auth_service = AuthService(user_repository, token_service)

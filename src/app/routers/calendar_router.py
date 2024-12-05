@@ -10,7 +10,7 @@ from src.app.schemas.calendar import CalendarEventsResponse
 
 router = APIRouter()
 
-@router.get("/events", response_model=CalendarEventsResponse)
+@router.get("/", response_model=CalendarEventsResponse)
 async def get_calendar_events(
     start_time: Optional[datetime] = Query(None),
     end_time: Optional[datetime] = Query(None),
