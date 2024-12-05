@@ -32,6 +32,6 @@ class CalendarController:
             )
         except Exception as e:
             logger.error(f"Calendar controller error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to fetch calendar events")
+            raise HTTPException(status_code=500, detail=str(e))
 
 calendar_controller = CalendarController(graph_service)

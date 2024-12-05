@@ -15,16 +15,16 @@ class AuthController:
             logger.error(f"Login controller error: {str(e)}")
             raise HTTPException(status_code=500, detail="Authentication failed")
 
-    async def login_by_sso(self):
+    async def login_by_sso(self, code_challenge: str):
         try:
-            return await self.auth_service.login_by_sso()
+            return await self.auth_service.login_by_sso(code_challenge=code_challenge)
         except Exception as e:
             logger.error(f"SSO login controller error: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to initiate SSO login")
 
-    async def login_by_sso_callback(self, code: str, db: AsyncSession):
+    async def login_by_sso_callback(self, code: str, state: str, code_verifier: str, db: AsyncSession):
         try:
-            return await self.auth_service.login_by_sso_callback(code=code, db=db)
+            return await self.auth_service.login_by_sso_callback(code=code, state=state, code_verifier=code_verifier, db=db)
         except Exception as e:
             logger.error(f"SSO callback controller error: {str(e)}")
             raise HTTPException(status_code=500, detail="SSO authentication failed")

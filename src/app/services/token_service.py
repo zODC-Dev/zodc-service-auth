@@ -60,7 +60,8 @@ class TokenService:
             # Use MSAL to refresh token
             result = await msal_app.acquire_token_by_refresh_token(
                 user.microsoft_refresh_token,
-                scopes=["Calendars.Read, User.Read, Calendars.ReadWrite"]
+                # scopes=["Calendars.Read, User.Read, Calendars.ReadWrite"]
+                scopes=["User.Read"]
             )
 
             if "error" in result:

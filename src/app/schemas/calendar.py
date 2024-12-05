@@ -5,7 +5,7 @@ from datetime import datetime
 class Attendee(BaseModel):
     email: str
     name: Optional[str]
-    response_status: Optional[str]
+    response_status: Optional[str] = None
 
 class CalendarEvent(BaseModel):
     id: str
