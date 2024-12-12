@@ -1,7 +1,14 @@
+from pydantic import AnyHttpUrl, PostgresDsn
 from pydantic_settings import BaseSettings
-from pydantic import PostgresDsn, AnyHttpUrl
+
 
 class Settings(BaseSettings):
+    """Application settings.
+
+    Args:
+        BaseSettings: Base settings class
+    """
+
     # Database settings
     DATABASE_URL: PostgresDsn
 
@@ -30,25 +37,24 @@ class Settings(BaseSettings):
     AZURE_AD_REDIRECT_URI: str
     AZURE_AD_OBJECT_ID: str
     AZURE_AD_CLIENT_SECRET_ID: str
-    # AZURE_AD_SCOPES: list = ["User.Read", "Calendars.Read", "Calendars.ReadWrite", "offline_access", "openid", "profile", "email"]
-    AZURE_AD_SCOPES: list = [
+    AZURE_AD_SCOPES: list[str] = [
         "openid",
-        "profile", 
-        "email", 
+        "profile",
+        "email",
         "offline_access",
         "https://graph.microsoft.com/user.read",
         "https://graph.microsoft.com/calendars.read",
-        "https://graph.microsoft.com/calendars.readwrite"
+        "https://graph.microsoft.com/calendars.readwrite",
     ]
 
     # Redis settings
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = None  # Add password if Redis is secured
+    REDIS_PASSWORD: str | None = None  # Add password if Redis is secured
     REDIS_DB: int = 0  # Default Redis database
 
     # FastAPI Azure Auth settings
-    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = ['http://localhost:8000', 'http://localhost:4200']
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = ["http://localhost:8000", "http://localhost:4200"]
     OPENAPI_CLIENT_ID: str = ""
     APP_CLIENT_ID: str = ""
 
@@ -63,10 +69,12 @@ class Settings(BaseSettings):
     SERVER_AZURE_REDIRECT_URI: str = ""
     SERVER_AZURE_CLIENT_SECRET: str = ""
 
-
     class Config:
+        """Configuration settings."""
+
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+
 
 settings = Settings()
