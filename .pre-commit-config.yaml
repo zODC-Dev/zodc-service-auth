@@ -1,0 +1,18 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.8.2 # Match your installed version of ruff
+    hooks:
+      - id: ruff
+
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.13.0 # Match the version of mypy you're using
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies: [] # You can leave this empty since Poetry manages your dependencies
