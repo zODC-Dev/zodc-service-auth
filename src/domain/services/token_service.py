@@ -1,17 +1,18 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.entities.auth import AuthToken, UserIdentity
+from src.domain.entities.auth import AuthToken
+from src.domain.entities.user import User
 
 
 class ITokenService(ABC):
     @abstractmethod
-    async def create_app_token(self, user: UserIdentity) -> AuthToken:
+    async def create_app_token(self, user: User) -> AuthToken:
         """Create new access token"""
         pass
 
     @abstractmethod
-    async def verify_token(self, token: str) -> Optional[UserIdentity]:
+    async def verify_token(self, token: str) -> Optional[User]:
         """Verify token and return user identity"""
         pass
 

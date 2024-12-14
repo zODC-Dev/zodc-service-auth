@@ -4,48 +4,51 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import logger
+from src.domain.entities.user import User as UserEntity
 from src.domain.repositories.user_repository import IUserRepository
-from src.infrastructure.models.user import User, UserCreate, UserUpdate
+from src.infrastructure.models.user import User as UserModel, UserCreate
 
 
 class SQLAlchemyUserRepository(IUserRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+    async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
         result = await self.session.exec(
-            select(User).where(User.id == user_id)
+            select(UserModel).where(UserModel.id == user_id)
         )
-        return result.first()
+        user = result.first()
+        return self._to_domain(user) if user else None
 
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    async def get_user_by_email(self, email: str) -> Optional[UserEntity]:
         try:
             result = await self.session.exec(
-                select(User).where(User.email == email)
+                select(UserModel).where(UserModel.email == email)
             )
-            value = result.first()
-            logger.info(f"value: {value}")
-            return value
+            user = result.first()
+            return self._to_domain(user) if user else None
         except Exception as e:
             logger.error(f"{str(e)}")
             return None
 
-    async def create_user(self, user_data: UserCreate) -> User:
-        user = User.model_validate(user_data)
+    async def create_user(self, user_data: UserCreate) -> UserEntity:
+        user = UserModel.model_validate(user_data)
         self.session.add(user)
         await self.session.commit()
         await self.session.refresh(user)
-        return user
+        return self._to_domain(user)
 
-    async def update_user(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
-        user = await self.get_user_by_id(user_id)
-        if not user:
-            return None
-
-        user_data_dict = user_data.model_dump(exclude_unset=True)
-        for key, value in user_data_dict.items():
-            setattr(user, key, value)
-
-        await self.session.commit()
-        await self.session.refresh(user)
-        return user
+    def _to_domain(self, db_user: UserModel) -> UserEntity:
+        """Convert DB model to domain entity"""
+        return UserEntity(
+            id=db_user.id,
+            email=db_user.email,
+            full_name=db_user.full_name,
+            is_active=db_user.is_active,
+            created_at=db_user.created_at,
+            microsoft_id=db_user.microsoft_id,
+            microsoft_refresh_token=db_user.microsoft_refresh_token,
+            microsoft_token=db_user.microsoft_token,
+            roles=db_user.roles,
+            permissions=db_user.permissions,
+        )

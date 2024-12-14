@@ -29,3 +29,7 @@ class UserUpdateError(UserError):
 class UserDeletionError(UserError):
     """Raised when user deletion fails"""
     pass
+
+class UserCreationError(UserError):
+    """Raised when user creation fails"""
+    pass

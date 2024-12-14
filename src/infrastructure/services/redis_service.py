@@ -1,5 +1,6 @@
-import json
 from datetime import datetime
+import json
+from typing import Any, Dict
 
 from redis.asyncio import Redis
 
@@ -12,14 +13,14 @@ class RedisService:
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    async def get(self, key: str) -> dict:
+    async def get(self, key: str) -> Any:
         """Get a value from Redis by key."""
-        token_data = await self.redis.get(key)
-        if token_data:
-            return json.loads(token_data)
+        value = await self.redis.get(key)
+        if value:
+            return json.loads(value)
         return None
 
-    async def set(self, key: str, value: dict, expiry: int):
+    async def set(self, key: str, value: Dict[str, Any], expiry: int):
         """Set a value in Redis with an expiry time."""
         await self.redis.setex(key, expiry, json.dumps(value))
 
@@ -27,12 +28,12 @@ class RedisService:
         """Delete a key from Redis."""
         await self.redis.delete(key)
 
-    async def cache_token(self, user_id: int, access_token: str, expiry: datetime):
+    async def cache_token(self, user_id: int, access_token: str, expiry: int):
         """Cache microsoft access token with expiry."""
         try:
             key = f"msft_token:{user_id}"
-            token_data = {"access_token": access_token, "expiry": expiry.isoformat()}
-            await self.set(key, token_data, expiry.timestamp() - datetime.now().timestamp())
+            token_data = {"access_token": access_token, "expiry": expiry}
+            await self.set(key, token_data, expiry)
         except Exception as e:
             logger.error(f"{str(e)}")
 
@@ -43,5 +44,6 @@ class RedisService:
         if token_data:
             expiry = datetime.fromisoformat(token_data["expiry"])
             if expiry > datetime.now():
-                return token_data["access_token"]
-        return None
+                access_token: str = token_data.get("access_token", "")
+                return access_token
+        return ""

@@ -3,13 +3,12 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Security
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import SQLModel
 
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
 from src.app.routers.task_router import router as task_router
 from src.configs.auth import azure_scheme
-from src.configs.database import engine
+from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
 
@@ -19,9 +18,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize configurations"""
     # Startup
     log.info(f"Starting up {settings.APP_NAME}")
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    log.info("Database tables created")
+    await init_db()
 
     """
     Load OpenID config on startup.
@@ -32,7 +29,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     log.info(f"Shutting down {settings.APP_NAME}")
-    await engine.dispose()
 
 
 app = FastAPI(

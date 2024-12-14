@@ -3,6 +3,7 @@ from src.domain.entities.auth import AuthToken, SSOCredentials, UserCredentials
 from src.domain.exceptions.auth_exceptions import (
     InvalidCredentialsError,
 )
+from src.domain.exceptions.user_exceptions import UserCreationError
 from src.domain.repositories.auth_repository import IAuthRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
@@ -52,10 +53,14 @@ class AuthService:
 
         # Get or create user
         user = await self.user_repository.get_user_by_email(microsoft_info.email)
-        if not user:
+        if user is None:
             user = await self.auth_repository.create_sso_user(microsoft_info)
 
+
         logger.info(f"src.app.services.auth_service: user {user}")
+
+        if user.id is None:
+            raise UserCreationError("Something went wrong")
 
         # Store microsoft access token to redis
         await self.redis_service.cache_token(
