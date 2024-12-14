@@ -42,3 +42,8 @@ Using `mypy` - a static type checker for Python.
 ```bash
 poetry run mypy src --show-traceback --explicit-package-bases
 ```
+
+Using `ruff` to auto sort imports
+```bash
+ruff check --select I src --fix
+```

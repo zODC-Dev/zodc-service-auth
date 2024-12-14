@@ -1,11 +1,10 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-import jwt
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import jwt
 
 from src.configs.settings import settings
-from src.domain.exceptions.auth_exceptions import AuthException
 
 security = HTTPBearer()
 
@@ -37,25 +36,23 @@ class JWTAuth:
 
             # Check roles if required
             if self.required_roles and not self._check_roles(payload):
-                raise AuthException.INSUFFICIENT_PERMISSIONS
+                raise HTTPException(status_code=403, detail="User does not have permission")
 
             # Check permissions if required
             if self.required_permissions and not self._check_permissions(payload):
-                raise AuthException.INSUFFICIENT_PERMISSIONS
+                raise HTTPException(status_code=403, detail="User does not have permission")
 
             return payload
 
-        except jwt.ExpiredSignatureError as e:
-            raise AuthException.TOKEN_EXPIRED from e
-        except jwt.InvalidTokenError as e:
-            raise AuthException.INVALID_TOKEN from e
+        except (jwt.InvalidTokenError, jwt.ExpiredSignatureError) as e:
+            raise HTTPException(status_code=401, detail="Invalid token") from e
         except Exception as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
 
-    def _check_roles(self, payload: dict[str, Any]) -> bool:
+    def _check_roles(self, payload: Dict[str, Any]) -> bool:
         user_roles = payload.get("roles", [])
         return any(role in user_roles for role in self.required_roles)
 
-    def _check_permissions(self, payload: dict[str, Any]) -> bool:
+    def _check_permissions(self, payload: Dict[str, Any]) -> bool:
         user_permissions = payload.get("permissions", [])
         return any(perm in user_permissions for perm in self.required_permissions)

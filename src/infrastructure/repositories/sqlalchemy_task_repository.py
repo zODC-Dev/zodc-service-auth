@@ -4,6 +4,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.task import Task
+from src.domain.exceptions.task_exceptions import TaskNotFoundError
 from src.domain.repositories.task_repository import ITaskRepository
 from src.infrastructure.models.task import Task as TaskModel
 
@@ -47,7 +48,9 @@ class SQLAlchemyTaskRepository(ITaskRepository):
             db_task.updated_at = task.updated_at
             await self.session.commit()
             await self.session.refresh(db_task)
-        return self._to_domain(db_task)
+            return self._to_domain(db_task)
+        else:
+            raise TaskNotFoundError(f"Task with id {task.id} not found")
 
     async def delete(self, task_id: int) -> Optional[Task]:
         db_task = await self.session.get(TaskModel, task_id)

@@ -2,12 +2,12 @@ from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
-from src.domain.entities.auth import MicrosoftIdentity, UserCredentials, UserIdentity
+from src.domain.entities.auth import MicrosoftIdentity, UserCredentials
+from src.domain.entities.user import User as UserEntity
 from src.domain.repositories.auth_repository import IAuthRepository
-from src.infrastructure.models.user import User
+from src.infrastructure.models.user import User as UserModel
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
-from src.infrastructure.security.password import verify_password
+from src.infrastructure.services.bcrypt_service import verify_password
 
 
 class SQLAlchemyAuthRepository(IAuthRepository):
@@ -18,7 +18,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
     async def verify_credentials(
         self,
         credentials: UserCredentials
-    ) -> Optional[UserIdentity]:
+    ) -> Optional[UserEntity]:
         user = await self.user_repository.get_user_by_email(credentials.email)
         if not user:
             return None
@@ -28,21 +28,18 @@ class SQLAlchemyAuthRepository(IAuthRepository):
 
         return user
 
-    async def create_sso_user(self, microsoft_identity: MicrosoftIdentity) -> UserIdentity:
-        try:
-            new_user = User(
-                email = microsoft_identity.email,
-                full_name = microsoft_identity.name,
-                roles = ["user"], # default role for sso user
-                permissions = [], # default permission for sso user
-                is_active = True
-            )
-            self.session.add(new_user)
-            await self.session.commit()
-            await self.session.refresh(new_user)
-            return self._to_domain(new_user)
-        except Exception as e:
-            logger.error(f"error: {str(e)}")
+    async def create_sso_user(self, microsoft_identity: MicrosoftIdentity) -> UserEntity:
+        new_user = UserModel(
+            email = microsoft_identity.email,
+            full_name = microsoft_identity.name or "",
+            roles = ["user"], # default role for sso user
+            permissions = [], # default permission for sso user
+            is_active = True
+        )
+        self.session.add(new_user)
+        await self.session.commit()
+        await self.session.refresh(new_user)
+        return self._to_domain(new_user)
 
     async def update_refresh_token(self, user_id: int, refresh_token: str) -> None:
         user = await self.user_repository.get_user_by_id(user_id)
@@ -50,12 +47,13 @@ class SQLAlchemyAuthRepository(IAuthRepository):
             user.microsoft_refresh_token = refresh_token
             await self.session.commit()
 
-    def _to_domain(self, user: User) -> UserIdentity:
-        return UserIdentity(
+    def _to_domain(self, user: UserModel) -> UserEntity:
+        return UserEntity(
             id=user.id,
             email=user.email,
             full_name=user.full_name,
             roles=user.roles,
             permissions=user.permissions,
-            is_active=user.is_active
+            is_active=user.is_active,
+            created_at=user.created_at,
         )

@@ -1,6 +1,8 @@
-import jwt
+from __future__ import annotations
+
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+import jwt
 from redis.asyncio import Redis
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -10,6 +12,7 @@ from src.app.services.auth_service import AuthService
 from src.configs.database import get_db
 from src.configs.logger import logger
 from src.configs.redis_config import get_redis_client
+from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
@@ -61,19 +64,15 @@ async def get_auth_controller(
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     token_service: JWTTokenService = Depends(get_token_service)
-) -> int:
-    """Get current user ID from JWT token
-
-    Returns user_id instead of full user to avoid unnecessary DB queries
-    """
+) -> User:
+    """Get current user ID from JWT token"""
     try:
         # Verify and decode token
         user_identity = await token_service.verify_token(token)
         if not user_identity:
             raise InvalidTokenError()
 
-        logger.info(f"Authenticated user ID: {user_identity.id}")
-        return user_identity.id
+        return user_identity
 
     except jwt.ExpiredSignatureError as e:
         raise TokenExpiredError() from e

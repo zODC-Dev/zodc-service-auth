@@ -11,7 +11,7 @@ class Task(BaseModel):
     """Task entity representing core business object"""
     id: Optional[int] = None
     title: str = Field(..., min_length=1)
-    description: Optional[str] = None
+    description: str = ""
     priority: TaskPriority = Field(default_factory=lambda: TaskPriority.create_medium())
     is_completed: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now())
@@ -33,7 +33,7 @@ class Task(BaseModel):
 
     def update_description(self, new_description: Optional[str]) -> None:
         """Update task description"""
-        self.description = new_description.strip() if new_description else None
+        self.description = new_description.strip() if new_description else ""
         self.updated_at = datetime.now()
 
     def update_priority(self, new_priority: TaskPriority) -> None:

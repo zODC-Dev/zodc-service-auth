@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -13,14 +13,6 @@ class AuthToken(BaseModel):
     expires_at: datetime
     token_type: str = "bearer"
     refresh_token: Optional[str] = None
-
-class UserIdentity(BaseModel):
-    id: Optional[int]
-    email: EmailStr
-    full_name: Optional[str]
-    roles: List[str] = Field(default_factory=lambda: ["user"])
-    permissions: List[str] = Field(default_factory=list)
-    is_active: bool = True
 
 class MicrosoftIdentity(BaseModel):
     email: str

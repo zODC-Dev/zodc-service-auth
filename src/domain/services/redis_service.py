@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from typing import Any, Dict
 
 
 class IRedisService(ABC):
     @abstractmethod
-    async def get(self, key: str) -> dict:
+    async def get(self, key: str) -> Dict[str, Any]:
         """Get a value from Redis by key."""
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: dict, expiry: int):
+    async def set(self, key: str, value: Dict[str, Any], expiry: int):
         """Set a value in Redis with an expiry time."""
         pass
 
@@ -19,7 +19,7 @@ class IRedisService(ABC):
         pass
 
     @abstractmethod
-    async def cache_token(self, user_id: int, access_token: str, expiry: datetime):
+    async def cache_token(self, user_id: int, access_token: str, expiry: int):
         """Cache microsoft access token with expiry."""
         pass
 

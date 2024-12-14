@@ -15,7 +15,7 @@ class TaskCreate(TaskBase):
     """Schema for creating a task"""
     pass
 
-class TaskUpdate(TaskBase):
+class TaskUpdate(BaseModel):
     """Schema for updating a task"""
     title: Optional[str] = None
     description: Optional[str] = None
@@ -23,7 +23,7 @@ class TaskUpdate(TaskBase):
 
 class TaskResponse(TaskBase):
     """Schema for task response"""
-    id: int
+    id: Optional[int]
     is_completed: bool
     created_at: datetime
     updated_at: Optional[datetime]
