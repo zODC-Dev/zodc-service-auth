@@ -1,15 +1,14 @@
 """Add microsoft_id column
 
 Revision ID: e4ef0057301c
-Revises: 
+Revises:
 Create Date: 2024-11-19 18:15:53.946115
 
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'e4ef0057301c'

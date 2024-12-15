@@ -28,3 +28,22 @@ If you create a new model, please import it in `alembric_migrations/env.py` and 
 ## Swagger
 
 To access the swagger documentation, go to `http://localhost:8000/docs`.
+
+## Linting
+
+Using `ruff` - an extremely fast and configurable linter for Python code.
+
+```bash
+poetry run ruff check
+```
+
+Using `mypy` - a static type checker for Python.
+
+```bash
+poetry run mypy src --show-traceback --explicit-package-bases
+```
+
+Using `ruff` to auto sort imports
+```bash
+ruff check --select I src --fix
+```
