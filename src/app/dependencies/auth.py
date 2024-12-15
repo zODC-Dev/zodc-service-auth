@@ -12,7 +12,6 @@ from src.app.services.auth_service import AuthService
 from src.configs.database import get_db
 from src.configs.logger import logger
 from src.configs.redis_config import get_redis_client
-from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
@@ -64,15 +63,17 @@ async def get_auth_controller(
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     token_service: JWTTokenService = Depends(get_token_service)
-) -> User:
+) -> int:
     """Get current user ID from JWT token"""
     try:
         # Verify and decode token
-        user_identity = await token_service.verify_token(token)
-        if not user_identity:
-            raise InvalidTokenError()
+        user = await token_service.verify_token(token)
+        if not user:
+            raise InvalidTokenError("Invalid token")
 
-        return user_identity
+        if not user.id:
+            raise InvalidTokenError("Something went wrong")
+        return user.id
 
     except jwt.ExpiredSignatureError as e:
         raise TokenExpiredError() from e

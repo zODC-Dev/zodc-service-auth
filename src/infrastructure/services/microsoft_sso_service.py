@@ -48,12 +48,8 @@ class MicrosoftSSOService(ISSOService):
             # Exchange code for tokens
             token_data = await self._exchange_code_for_token(code, code_verifier)
 
-            logger.info(f"token_data: {token_data}")
-
             # Validate and decode token
             user_info = self._validate_microsoft_token(token_data["id_token"])
-
-            logger.info(f"user_info: {user_info}")
 
             # Convert to domain entity
             return MicrosoftIdentity(

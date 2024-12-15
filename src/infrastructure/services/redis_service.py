@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 from typing import Any, Dict
 
@@ -41,9 +40,10 @@ class RedisService:
         """Get microsoft access token from cache if exists and valid."""
         key = f"msft_token:{user_id}"
         token_data = await self.get(key)
+
         if token_data:
-            expiry = datetime.fromisoformat(token_data["expiry"])
-            if expiry > datetime.now():
-                access_token: str = token_data.get("access_token", "")
-                return access_token
+            # expiry = datetime.fromisoformat(cast(str, token_data["expiry"]))
+            # if expiry > datetime.now():
+            access_token: str = token_data.get("access_token", "")
+            return access_token
         return ""

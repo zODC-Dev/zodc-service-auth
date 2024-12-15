@@ -29,7 +29,7 @@ class CalendarController:
                 page_size=page_size,
                 next_link=next_link
             )
-            return CalendarEventsResponse(events=events_list)
+            return CalendarEventsResponse(events=events_list.events, next_link=events_list.next_link)
         except CalendarError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except Exception as e:
