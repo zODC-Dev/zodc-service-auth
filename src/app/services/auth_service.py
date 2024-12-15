@@ -1,77 +1,77 @@
-from src.app.schemas.auth import LoginPayload
-from src.app.schemas.user import CreateUserPayload
-from src.app.repositories.user_repository import user_repository
-from passlib.context import CryptContext
-import jwt
-from fastapi import HTTPException
-from src.configs.settings import settings
-from datetime import timedelta, datetime
-import requests
-import ramda as R
+from src.domain.entities.auth import AuthToken, SSOCredentials, UserCredentials
+from src.domain.exceptions.auth_exceptions import (
+    InvalidCredentialsError,
+)
+from src.domain.exceptions.user_exceptions import UserCreationError
+from src.domain.repositories.auth_repository import IAuthRepository
+from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.redis_service import IRedisService
+from src.domain.services.sso_service import ISSOService
+from src.domain.services.token_service import ITokenService
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AuthService:
-    async def login(payload: LoginPayload, db):
-        user = await user_repository.get_user_by_email(email=payload.email, db=db)
-        if not user or not pwd_context.verify(payload.password, user.password):
-            return HTTPException(status_code=400, detail="Incorrect email or password")
+    def __init__(
+        self,
+        auth_repository: IAuthRepository,
+        user_repository: IUserRepository,
+        token_service: ITokenService,
+        sso_service: ISSOService,
+        redis_service: IRedisService
+    ):
+        self.auth_repository = auth_repository
+        self.token_service = token_service
+        self.sso_service = sso_service
+        self.user_repository = user_repository
+        self.redis_service = redis_service
+
+    async def login(self, credentials: UserCredentials) -> AuthToken:
+        """Handle email/password login"""
+        user = await self.auth_repository.verify_credentials(credentials)
+        if not user:
+            raise InvalidCredentialsError("Invalid email or password")
 
         if not user.is_active:
-            return HTTPException(status_code=400, detail="Inactive user")
-        access_token = AuthService.create_access_token(data={"sub": user.email}, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
-        
-        return {"access_token": access_token, "token_type": "bearer"}
+            raise InvalidCredentialsError("User is inactive")
 
-    async def login_by_sso(az_access_token: str, db):
-        graph_uri = "https://graph.microsoft.com/"
-        tenant_id = settings.AZURE_AD_TENANT_ID
-        client_id = settings.AZURE_AD_CLIENT_ID
-        authority = f"https://login.microsoftonline.com/{tenant_id}/discovery/keys?appid={client_id}"
-        access_token = az_access_token
+        return await self.token_service.create_app_token(user)
 
-        response_authority = requests.get(authority)
-        if response_authority.status_code != 200:
-            return HTTPException(status_code=400, detail="Error getting authority")
-        public_keys = response_authority.json()
-        kids = R.pluck("kid", public_keys["keys"])
-        x5ts = R.pluck("x5t", public_keys["keys"])
+    async def login_by_sso(self, code_challenge: str) -> str:
+        """Initialize SSO login flow"""
+        return await self.sso_service.generate_auth_url(code_challenge)
 
-        if access_token:
-            alg = jwt.get_unverified_header(access_token)["alg"]
-            at_kid = jwt.get_unverified_header(access_token)["kid"]
-            at_x5t = jwt.get_unverified_header(access_token)["x5t"]
-            if not(R.contains(at_kid, kids)) or not(R.contains(at_x5t, x5ts)):
-                return HTTPException(status_code=400, detail="Invalid access token")
-            decoded_token = jwt.decode(access_token, algorithms=[alg], options={"verify_signature": False})
-            at_tenant_id = decoded_token["tid"]
-            at_app_id = decoded_token["appid"]
-            at_email = decoded_token["email"]
-            at_full_name = decoded_token["name"]
-            if not(R.equals(at_tenant_id, tenant_id)) or not(R.equals(at_app_id, client_id)):
-                return HTTPException(status_code=400, detail="Invalid access token")
-        
-            be_access_token = AuthService.create_access_token(data={"sub": at_email}, expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    async def handle_sso_callback(self, sso_credentials: SSOCredentials) -> AuthToken:
+        """Handle SSO callback"""
+        # Get user info from SSO provider
+        microsoft_info = await self.sso_service.exchange_code(
+            sso_credentials.code,
+            sso_credentials.code_verifier
+        )
 
-            # Check if user exists in the database, if not, create the user
-            user = await user_repository.get_user_by_email(email=at_email, db=db)
-            if not user:
-                create_user_payload = CreateUserPayload(email=at_email, password="password", full_name=at_full_name)
-                user = await user_repository.create_user(payload=create_user_payload, db=db)
+        # Get or create user
+        user = await self.user_repository.get_user_by_email(microsoft_info.email)
+        if user is None:
+            user = await self.auth_repository.create_sso_user(microsoft_info)
 
-            return {"access_token": be_access_token, "token_type": "bearer"}
+        if user.id is None:
+            raise UserCreationError("Something went wrong")
 
-        return HTTPException(status_code=400, detail="Invalid access token")
-        
-    @staticmethod
-    def create_access_token(data: dict, expires_delta: timedelta = None):
-        to_encode = data.copy()
-        if expires_delta:
-            expire = datetime.utcnow() + expires_delta
-        else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-        return encoded_jwt
-    
-auth_service = AuthService()
+        # Store microsoft access token to redis
+        await self.redis_service.cache_token(
+            user_id=user.id,
+            access_token=microsoft_info.access_token,
+            expiry=microsoft_info.expires_in
+        )
+
+
+        # Create access token
+        auth_token = await self.token_service.create_app_token(user)
+
+        # Store refresh token if provided
+        if auth_token.refresh_token:
+            await self.token_service.store_app_refresh_token(
+                user.id,
+                auth_token.refresh_token
+            )
+
+        return auth_token

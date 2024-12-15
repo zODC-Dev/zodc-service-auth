@@ -1,32 +1,50 @@
+from typing import List
+
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas.task import TaskCreate, TaskUpdate
-from ..services.task_service import task_service
+
+from src.app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
+from src.app.services.task_service import TaskService
+from src.domain.exceptions.task_exceptions import TaskDomainError, TaskNotFoundError
+
 
 class TaskController:
-    async def create_task(self, task: TaskCreate, db: AsyncSession):
-        return await task_service.create_task(db=db, task=task)
+    def __init__(self, task_service: TaskService):
+        self.task_service = task_service
 
-    async def read_task(self, task_id: int, db: AsyncSession):
-        db_task = await task_service.get_task(db, task_id=task_id)
-        if db_task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
-        return db_task
+    async def create_task(self, task: TaskCreate) -> TaskResponse:
+        try:
+            created_task = await self.task_service.create_task(task)
+            return TaskResponse.from_domain(created_task)
+        except TaskDomainError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
-    async def read_tasks(self, skip: int, limit: int, db: AsyncSession):
-        tasks = await task_service.get_tasks(db, skip=skip, limit=limit)
-        return tasks
+    async def get_task(self, task_id: int) -> TaskResponse:
+        try:
+            task = await self.task_service.get_task(task_id)
+            return TaskResponse.from_domain(task)
+        except TaskNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
 
-    async def update_task(self, task_id: int, task: TaskUpdate, db: AsyncSession):
-        db_task = await task_service.update_task(db, task_id=task_id, task=task)
-        if db_task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
-        return db_task
+    async def get_tasks(
+        self, skip: int = 0, limit: int = 100
+    ) -> List[TaskResponse]:
+        tasks = await self.task_service.get_tasks(skip, limit)
+        return [TaskResponse.from_domain(task) for task in tasks]
 
-    async def delete_task(self, task_id: int, db: AsyncSession):
-        db_task = await task_service.delete_task(db, task_id=task_id)
-        if db_task is None:
-            raise HTTPException(status_code=404, detail="Task not found")
-        return db_task
+    async def update_task(
+        self, task_id: int, task: TaskUpdate
+    ) -> TaskResponse:
+        try:
+            updated_task = await self.task_service.update_task(task_id, task)
+            return TaskResponse.from_domain(updated_task)
+        except TaskNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        except TaskDomainError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
-task_controller = TaskController()
+    async def delete_task(self, task_id: int) -> TaskResponse:
+        try:
+            task = await self.task_service.delete_task(task_id)
+            return TaskResponse.from_domain(task)
+        except TaskNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e

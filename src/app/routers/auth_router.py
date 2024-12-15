@@ -1,18 +1,32 @@
-from fastapi import APIRouter
-from fastapi.security import OAuth2PasswordBearer
-from src.app.schemas.auth import LoginPayload
-from src.app.controllers.auth_controller import auth_controller
-from src.configs.database import get_db
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends
+
+from src.app.controllers.auth_controller import AuthController
+from src.app.dependencies.auth import get_auth_controller
+from src.app.schemas.requests.auth import LoginEmailPasswordRequest, LoginSSOCallbackRequest, LoginSSORequest
+from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlResponse
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@router.post("/auth/login")
-async def login(payload: LoginPayload, db: AsyncSession = Depends(get_db)):
-    return await auth_controller.login(payload=payload, db=db)
+@router.post("/login", response_model=LoginSuccessResponse)
+async def login(
+    request: LoginEmailPasswordRequest,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle login by using email password"""
+    return await controller.login(request)
 
-@router.post("/auth/login/sso")
-async def login_by_sso(az_access_token: str = None, db: AsyncSession = Depends(get_db)):
-    return await auth_controller.login_by_sso(az_access_token=az_access_token, db=db)
+@router.post("/microsoft", response_model=LoginUrlResponse)
+async def login_by_sso(
+    request: LoginSSORequest,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle login by SSO request, return login url"""
+    return await controller.login_by_sso(request)
+
+@router.post("/microsoft/callback", response_model=LoginSuccessResponse)
+async def sso_callback(
+    request: LoginSSOCallbackRequest,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle microsoft SSO callback, and return application access_token"""
+    return await controller.handle_sso_callback(request)
