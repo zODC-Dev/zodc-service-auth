@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
 from src.app.routers.task_router import router as task_router
+from src.app.routers.user_router import router as user_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
@@ -48,6 +49,7 @@ if settings.BACKEND_CORS_ORIGINS:
 app.include_router(task_router, prefix=settings.API_V1_STR + "/tasks", tags=["tasks"])
 app.include_router(auth_router, prefix=settings.API_V1_STR + "/auth", tags=["authentication"])
 app.include_router(calendar_router, prefix=settings.API_V1_STR + "/calendars", tags=["calendars"])
+app.include_router(user_router, prefix=settings.API_V1_STR + "/users", tags=["users"])
 
 if __name__ == "__main__":
     import uvicorn

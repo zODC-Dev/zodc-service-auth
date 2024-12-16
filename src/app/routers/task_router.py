@@ -28,7 +28,7 @@ async def create_task(
 
 @router.get("/protected")
 @require_permissions(
-    system_roles=["admin"]
+    system_roles=["user"]
 )
 async def protected_route(request: Request):
     """Test protected route"""
