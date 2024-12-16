@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import jwt
 from sqlmodel import select
@@ -12,12 +12,14 @@ from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenError, TokenExpiredError
 from src.domain.services.token_service import ITokenService
 from src.infrastructure.models.user import User as UserModel
+from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
 from src.infrastructure.services.redis_service import RedisService
 
 
 class JWTTokenService(ITokenService):
-    def __init__(self, redis_service: RedisService):
+    def __init__(self, redis_service: RedisService, role_repository: SQLAlchemyRoleRepository):
         self.redis_service = redis_service
+        self.role_repository = role_repository
 
     async def create_app_token(self, user: UserEntity) -> AuthToken:
         """Create new JWT token"""
@@ -25,16 +27,37 @@ class JWTTokenService(ITokenService):
             expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             expires_at = datetime.now() + expires_delta
 
-            to_encode = {
+            if user.id is None:
+                raise TokenError("User not exist")
+
+            # Get user's system role and permissions
+            system_role = await self.role_repository.get_user_system_role(user.id)
+            system_permissions = []
+            if system_role and system_role.id is not None:
+                system_permissions = await self.role_repository.get_role_permissions(system_role.id)
+
+            # Get user's project roles
+            # project_roles = await self.role_repository.get_user_project_roles(user.id)
+
+            claims: Dict[str, Any] = {
                 "sub": str(user.id),
                 "email": user.email,
-                "roles": user.roles,
-                "permissions": user.permissions,
+                "system_role": system_role.name if system_role else None,
+                "system_permissions": [p.name for p in system_permissions],
+                "project_roles": {
+                    # str(role.project_id): {
+                    #     "role": role.name,
+                    #     "permissions": [
+                    #         p.name for p in await self.role_repository.get_role_permissions(role.id)
+                    #     ]
+                    # }
+                    # for role in project_roles
+                },
                 "exp": expires_at
             }
 
             access_token = jwt.encode(
-                to_encode,
+                claims,
                 settings.JWT_SECRET,
                 algorithm=settings.JWT_ALGORITHM
             )
@@ -58,9 +81,8 @@ class JWTTokenService(ITokenService):
             return UserEntity(
                 id=int(payload["sub"]),
                 email=payload["email"],
-                full_name="",
-                roles=payload["roles"],
-                permissions=payload["permissions"],
+                name=payload["name"],
+                system_role=payload["system_role"],
                 is_active=True,
                 created_at=datetime.now()
             )

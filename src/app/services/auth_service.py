@@ -63,7 +63,6 @@ class AuthService:
             expiry=microsoft_info.expires_in
         )
 
-
         # Create access token
         auth_token = await self.token_service.create_app_token(user)
 

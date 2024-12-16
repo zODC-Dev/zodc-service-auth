@@ -43,12 +43,11 @@ class SQLAlchemyUserRepository(IUserRepository):
         return UserEntity(
             id=db_user.id,
             email=db_user.email,
-            full_name=db_user.full_name,
+            name=db_user.name,
             is_active=db_user.is_active,
             created_at=db_user.created_at,
             microsoft_id=db_user.microsoft_id,
             microsoft_refresh_token=db_user.microsoft_refresh_token,
             microsoft_token=db_user.microsoft_token,
-            roles=db_user.roles,
-            permissions=db_user.permissions,
+            system_role=db_user.system_role,
         )

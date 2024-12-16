@@ -30,5 +30,5 @@ class UserService:
 
     def _validate_update_data(self, update_data: Dict[str, Any]) -> bool:
         """Validate user update data"""
-        allowed_fields = {"full_name", "email", "is_active"}
+        allowed_fields = {"name", "email", "is_active"}
         return all(key in allowed_fields for key in update_data.keys())

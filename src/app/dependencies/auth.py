@@ -14,6 +14,7 @@ from src.configs.logger import logger
 from src.configs.redis_config import get_redis_client
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
+from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
@@ -21,18 +22,22 @@ from src.infrastructure.services.redis_service import RedisService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-async def get_auth_repository(db: AsyncSession = Depends(get_db)) -> SQLAlchemyAuthRepository:
+async def get_role_repository(db: AsyncSession = Depends(get_db)) -> SQLAlchemyRoleRepository:
+    """Dependency for role repository"""
+    return SQLAlchemyRoleRepository(db)
+
+async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository = Depends(get_role_repository)) -> SQLAlchemyAuthRepository:
     """Dependency for auth repository"""
     user_repository = SQLAlchemyUserRepository(db)
-    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository)
+    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository)
 
 async def get_redis_service(redis_client: Redis = Depends(get_redis_client)):
     """Dependency for redis repository"""
     return RedisService(redis_client=redis_client)
 
-async def get_token_service(redis_client: RedisService = Depends(get_redis_service)):
+async def get_token_service(redis_client: RedisService = Depends(get_redis_service), role_repository = Depends(get_role_repository)):
     """Dependency for token service"""
-    return JWTTokenService(redis_service=redis_client)
+    return JWTTokenService(redis_service=redis_client, role_repository=role_repository)
 
 async def get_sso_service():
     """Dependency for SSO service"""

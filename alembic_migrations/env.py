@@ -12,6 +12,11 @@ from sqlmodel import SQLModel
 # Add all models need to be created in database
 from src.infrastructure.models.task import Task
 from src.infrastructure.models.user import User
+from src.infrastructure.models.role import Role
+from src.infrastructure.models.permission import Permission
+from src.infrastructure.models.role_permission import RolePermission
+from src.infrastructure.models.project import Project
+from src.infrastructure.models.user_project_role import UserProjectRole
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
