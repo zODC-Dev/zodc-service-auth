@@ -5,7 +5,7 @@ import jwt
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.auth import AuthToken
 from src.domain.entities.user import User as UserEntity
@@ -67,7 +67,7 @@ class JWTTokenService(ITokenService):
                 expires_at=expires_at
             )
         except Exception as e:
-            logger.error(f"Token creation error: {str(e)}")
+            log.error(f"Token creation error: {str(e)}")
             raise TokenError("Failed to create token") from e
 
     async def verify_token(self, token: str) -> Optional[UserEntity]:
@@ -107,7 +107,7 @@ class JWTTokenService(ITokenService):
                 raise TokenError("Microsoft token not found")
             return db_token
         except Exception as e:
-            logger.error(f"Error getting Microsoft token: {str(e)}")
+            log.error(f"Error getting Microsoft token: {str(e)}")
             raise TokenError("Failed to get Microsoft token") from e
 
     async def store_app_refresh_token(self, user_id: int, refresh_token: str) -> None:

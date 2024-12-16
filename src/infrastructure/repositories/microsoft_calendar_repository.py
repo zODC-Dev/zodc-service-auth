@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.domain.entities.calendar import CalendarEvent, CalendarEventsList
 from src.domain.exceptions.calendar_exceptions import CalendarError
 from src.domain.repositories.calendar_repository import ICalendarRepository
@@ -53,13 +53,13 @@ class MicrosoftCalendarRepository(ICalendarRepository):
                     data = response.json()
                     return self._parse_response(data)
                 else:
-                    logger.error(
+                    log.error(
                         f"Microsoft Graph API error: {response.status_code} - {response.text}"
                     )
                     raise CalendarError("Failed to fetch calendar events")
 
         except Exception as e:
-            logger.error(f"Calendar repository error: {str(e)}")
+            log.error(f"Calendar repository error: {str(e)}")
             raise CalendarError("Failed to fetch calendar events") from e
 
     def _build_query_params(

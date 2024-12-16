@@ -834,23 +834,6 @@ all = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "httpx (>
 standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "httpx (>=0.23.0)", "jinja2 (>=2.11.2)", "python-multipart (>=0.0.7)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
-name = "fastapi-azure-auth"
-version = "5.0.1"
-description = "Easy and secure implementation of Azure AD for your FastAPI APIs"
-optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "fastapi_azure_auth-5.0.1-py3-none-any.whl", hash = "sha256:6d390f194c4059a3523d7cd41b58e41b4a37504eca19bfa74fdbe97bec146741"},
-    {file = "fastapi_azure_auth-5.0.1.tar.gz", hash = "sha256:32c64007ef22b937867f32fa44f08325ec51deb54f6c9e8220ee9bdf6173f4c5"},
-]
-
-[package.dependencies]
-cryptography = ">=40.0.1"
-fastapi = ">0.68.0"
-httpx = ">0.18.2"
-pyjwt = ">=2.8.0,<3.0.0"
-
-[[package]]
 name = "filelock"
 version = "3.16.1"
 description = "A platform independent file lock."
@@ -2964,4 +2947,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "f7581d8604227ba0b1b2882345ec5c324b377e4116d56ada4d87af7721acea65"
+content-hash = "e664a4ea8d24ccacd7787a6eaf8cd63ce19e28502ce047400b51009a40fcb4c8"

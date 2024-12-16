@@ -30,23 +30,6 @@ class Settings(BaseSettings):
     # Port
     PORT: int = 8000
 
-    # Azure AD settings
-    AZURE_AD_TENANT_ID: str
-    AZURE_AD_CLIENT_ID: str
-    AZURE_AD_CLIENT_SECRET: str
-    AZURE_AD_REDIRECT_URI: str
-    AZURE_AD_OBJECT_ID: str
-    AZURE_AD_CLIENT_SECRET_ID: str
-    AZURE_AD_SCOPES: list[str] = [
-        "openid",
-        "profile",
-        "email",
-        "offline_access",
-        "https://graph.microsoft.com/user.read",
-        "https://graph.microsoft.com/calendars.read",
-        "https://graph.microsoft.com/calendars.readwrite",
-    ]
-
     # Redis settings
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -63,11 +46,6 @@ class Settings(BaseSettings):
     CLIENT_AZURE_TENANT_ID: str = ""
     CLIENT_AZURE_REDIRECT_URI: str = ""
     CLIENT_AZURE_CLIENT_SECRET: str = ""
-
-    SERVER_AZURE_CLIENT_ID: str = ""
-    SERVER_AZURE_TENANT_ID: str = ""
-    SERVER_AZURE_REDIRECT_URI: str = ""
-    SERVER_AZURE_CLIENT_SECRET: str = ""
 
     class Config:
         """Configuration settings."""

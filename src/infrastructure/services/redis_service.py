@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 from redis.asyncio import Redis
 
-from src.configs.logger import logger
+from src.configs.logger import log
 
 
 class RedisService:
@@ -34,7 +34,7 @@ class RedisService:
             token_data = {"access_token": access_token, "expiry": expiry}
             await self.set(key, token_data, expiry)
         except Exception as e:
-            logger.error(f"{str(e)}")
+            log.error(f"{str(e)}")
 
     async def get_cached_token(self, user_id: int) -> str:
         """Get microsoft access token from cache if exists and valid."""

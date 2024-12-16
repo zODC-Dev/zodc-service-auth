@@ -10,7 +10,7 @@ from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
 from src.app.services.auth_service import AuthService
 from src.configs.database import get_db
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.configs.redis_config import get_redis_client
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
@@ -85,7 +85,7 @@ async def get_current_user(
     except jwt.InvalidTokenError as e:
         raise InvalidTokenError() from e
     except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
+        log.error(f"Authentication error: {str(e)}")
         raise HTTPException(
             status_code=401,
             detail="Could not validate credentials"

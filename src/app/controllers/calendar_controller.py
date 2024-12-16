@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from src.app.schemas.responses.calendar import CalendarEventsResponse
 from src.app.services.calendar_service import CalendarService
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.domain.exceptions.calendar_exceptions import CalendarError
 
 
@@ -33,5 +33,5 @@ class CalendarController:
         except CalendarError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except Exception as e:
-            logger.error(f"Calendar controller error: {str(e)}")
+            log.error(f"Calendar controller error: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error") from e
