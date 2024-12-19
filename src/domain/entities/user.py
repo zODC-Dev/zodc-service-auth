@@ -7,7 +7,7 @@ from .role import Role
 
 
 class User(BaseEntity):
-    id: Optional[int]
+    id: Optional[int] = None
     email: EmailStr
     password: Optional[str] = None
     name: Optional[str] = None

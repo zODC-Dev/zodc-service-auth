@@ -3,8 +3,6 @@ from typing import Any, Dict
 
 from redis.asyncio import Redis
 
-from src.configs.logger import log
-
 
 class RedisService:
     """Service for managing Redis operations."""
@@ -19,22 +17,19 @@ class RedisService:
             return json.loads(value)
         return None
 
-    async def set(self, key: str, value: Dict[str, Any], expiry: int):
+    async def set(self, key: str, value: Dict[str, Any], expiry: int) -> None:
         """Set a value in Redis with an expiry time."""
-        await self.redis.setex(key, expiry, json.dumps(value))
+        await self.redis.setex(key, expiry, json.dumps(value, default=str))
 
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
         """Delete a key from Redis."""
         await self.redis.delete(key)
 
-    async def cache_token(self, user_id: int, access_token: str, expiry: int):
+    async def cache_token(self, user_id: int, access_token: str, expiry: int) -> None:
         """Cache microsoft access token with expiry."""
-        try:
-            key = f"msft_token:{user_id}"
-            token_data = {"access_token": access_token, "expiry": expiry}
-            await self.set(key, token_data, expiry)
-        except Exception as e:
-            log.error(f"{str(e)}")
+        key = f"msft_token:{user_id}"
+        token_data = {"access_token": access_token, "expiry": expiry}
+        await self.set(key, token_data, expiry)
 
     async def get_cached_token(self, user_id: int) -> str:
         """Get microsoft access token from cache if exists and valid."""
