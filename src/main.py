@@ -8,6 +8,7 @@ from src.app.routers.util_router import router as util_router
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
 from src.app.routers.task_router import router as task_router
+from src.app.routers.user_router import router as user_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings

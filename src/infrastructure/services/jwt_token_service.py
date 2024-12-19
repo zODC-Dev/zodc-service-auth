@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.auth import AuthToken
+from src.domain.entities.role import Role as RoleEntity
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenError, TokenExpiredError
 from src.domain.services.token_service import ITokenService
@@ -78,11 +79,23 @@ class JWTTokenService(ITokenService):
                 settings.JWT_SECRET,
                 algorithms=[settings.JWT_ALGORITHM]
             )
+            log.info(f"Payload: {payload}")
+
+            # Convert system_role string to Role entity
+            system_role_name = payload.get("system_role")
+            system_role = None
+            if system_role_name:
+                system_role = RoleEntity(
+                    id=None,  # We don't need the ID for authorization
+                    name=system_role_name,
+                    description=None
+                )
+
             return UserEntity(
                 id=int(payload["sub"]),
                 email=payload["email"],
-                name=payload["name"],
-                system_role=payload["system_role"],
+                name=payload.get("name", ""),
+                system_role=system_role,
                 is_active=True,
                 created_at=datetime.now()
             )
