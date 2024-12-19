@@ -9,7 +9,9 @@ class UtilController:
 
     async def extract_excel(self, file: UploadFile):
         try:
-            result = self.util_service.extract_excel(file)
+            result = await self.util_service.extract_excel(file)
             return result
         except Exception as e:
-            raise HTTPException(500, detail=f"Error processing file: {e}")
+            # raise XXX from e to avoid Ruff check error
+            raise HTTPException(
+                500, detail=f"Error processing file: {e}") from e

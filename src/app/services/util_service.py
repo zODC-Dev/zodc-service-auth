@@ -1,38 +1,13 @@
-from io import BytesIO
+from typing import Any, Dict
+
 from fastapi import UploadFile
-import openpyxl
+
+from src.domain.services.excel_file_service import IExcelFileService
 
 
 class UtilService:
-    def __init__(self):
-        pass
+    def __init__(self, excel_file_service: IExcelFileService) -> None:
+        self.excel_file_service = excel_file_service
 
-    async def extract_excel(self, file: UploadFile):
-        """Extract excel data in form create"""
-        contents = await file.read()
-        workbook = openpyxl.load_workbook(
-            filename=BytesIO(contents), data_only=True)
-
-        result = {}
-        for sheet_name in workbook.sheetnames:
-            sheet = workbook[sheet_name]
-
-            headers = [cell.value for cell in sheet[1]]
-
-            sheet_result = {header: [] for header in headers}
-
-            for row in sheet.iter_rows(min_row=2):
-                for cell, header in zip(row, headers):
-                    sheet_result[header].append(
-                        str(cell.value) if cell.value is not None else "")
-
-            if not result:
-                result = sheet_result
-            else:
-                for key, value in sheet_result.items():
-                    if key in result:
-                        result[key].extend(value)
-                    else:
-                        result[key] = value
-
-                return result
+    async def extract_excel(self, file: UploadFile) -> Dict[str, Any]:
+        return await self.excel_file_service.extract_file(file)
