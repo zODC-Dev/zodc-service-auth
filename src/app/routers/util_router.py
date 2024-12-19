@@ -9,4 +9,5 @@ router = APIRouter()
 
 @router.post("/excel/extract")
 async def extract_excel(file: UploadFile = File(...), controller: UtilController = Depends(get_util_controller)):
+    """Extract excel data in form create"""
     return await controller.extract_excel(file)
