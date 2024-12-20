@@ -1,9 +1,12 @@
 {
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": "explicit",
-        "source.fixAll.ruff": "explicit"
-    },
-    "[python]": {
-        "editor.formatOnSave": true
-    }
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll.ruff": "explicit"
+  },
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
+  "python.analysis.indexing": true,
+  "python.analysis.autoImportCompletions": true
 }

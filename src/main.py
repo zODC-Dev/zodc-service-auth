@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.app.routers.util_router import router as util_router
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
 from src.app.routers.task_router import router as task_router
@@ -40,18 +41,24 @@ app = FastAPI(
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_origins=[str(origin)
+                       for origin in settings.BACKEND_CORS_ORIGINS],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-app.include_router(task_router, prefix=settings.API_V1_STR + "/tasks", tags=["tasks"])
-app.include_router(auth_router, prefix=settings.API_V1_STR + "/auth", tags=["authentication"])
-app.include_router(calendar_router, prefix=settings.API_V1_STR + "/calendars", tags=["calendars"])
-app.include_router(user_router, prefix=settings.API_V1_STR + "/users", tags=["users"])
+app.include_router(task_router, prefix=settings.API_V1_STR +
+                   "/tasks", tags=["tasks"])
+app.include_router(auth_router, prefix=settings.API_V1_STR +
+                   "/auth", tags=["authentication"])
+app.include_router(calendar_router, prefix=settings.API_V1_STR +
+                   "/calendars", tags=["calendars"])
+app.include_router(util_router, prefix=settings.API_V1_STR +
+                   "/utils", tags=["utils"])
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("src.main:app", host="0.0.0.0", port=settings.PORT, reload=True)
+    uvicorn.run("src.main:app", host="0.0.0.0",
+                port=settings.PORT, reload=True)
