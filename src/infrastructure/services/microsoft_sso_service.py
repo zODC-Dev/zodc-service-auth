@@ -13,7 +13,8 @@ from src.domain.services.sso_service import ISSOService
 
 class MicrosoftSSOService(ISSOService):
     COMMON_TENANT = 'common'
-    TOKEN_ENDPOINT = f"https://login.microsoftonline.com/{COMMON_TENANT}/oauth2/v2.0"
+    TOKEN_ENDPOINT = f"https://login.microsoftonline.com/{
+        COMMON_TENANT}/oauth2/v2.0"
     SCOPE = "openid profile email offline_access User.Read"
 
     async def generate_auth_url(self, code_challenge: str) -> str:
@@ -79,7 +80,8 @@ class MicrosoftSSOService(ISSOService):
             ) as response:
                 data: Dict[str, Any] = await response.json()
                 if "error" in data:
-                    log.error(f"Token exchange failed: {data.get('error_description')}")
+                    log.error(f"Token exchange failed: {
+                              data.get('error_description')}")
                     raise SSOError("Failed to exchange authorization code")
                 return data
 

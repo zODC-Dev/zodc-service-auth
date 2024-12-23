@@ -1,9 +1,10 @@
 from typing import List, Optional
 
-from sqlmodel import select
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.entities.role import Permission as PermissionEntity, Role as RoleEntity
+from src.domain.entities.role import Permission as PermissionEntity, Role as RoleEntity, RoleCreate, RoleUpdate
+from src.domain.exceptions.role_exceptions import RoleAlreadyExistsError, RoleNotFoundError
 from src.domain.repositories.role_repository import IRoleRepository
 from src.infrastructure.models.permission import Permission
 from src.infrastructure.models.role import Role
@@ -152,7 +153,11 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         return RoleEntity(
             id=role.id,
             name=role.name,
-            description=role.description
+            description=role.description,
+            is_system_role=role.is_system_role,
+            is_active=role.is_active,
+            permissions=[self._permission_to_domain(
+                p) for p in role.permissions]
         )
 
     def _permission_to_domain(self, permission: Permission) -> PermissionEntity:
@@ -161,3 +166,75 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             name=permission.name,
             description=permission.description
         )
+
+    async def get_all_roles(self, include_deleted: bool = False) -> List[RoleEntity]:
+        query = select(Role)
+        if not include_deleted:
+            query = query.where(Role.is_active)
+        result = await self.session.exec(query)
+        roles = result.all()
+        return [self._to_domain(r) for r in roles]
+
+    async def create_role(self, role_data: RoleCreate) -> RoleEntity:
+        # Check if role already exists
+        existing_role = await self.get_role_by_name(role_data.name)
+        if existing_role:
+            raise RoleAlreadyExistsError(role_data.name)
+
+        # Create role without permissions first
+        role = Role(
+            name=role_data.name,
+            description=role_data.description or "",
+            is_system_role=role_data.is_system_role,
+            is_active=role_data.is_active
+        )
+        self.session.add(role)
+
+        # If permission_names are provided, fetch and link permissions
+        if role_data.permission_names:
+            # Get permissions by names
+            permissions_query = select(Permission).where(
+                or_(*[Permission.name == name for name in role_data.permission_names])
+            )
+            result = await self.session.exec(permissions_query)
+            permissions = result.all()
+
+            # Link permissions to role
+            role.permissions = list(permissions)
+
+        await self.session.commit()
+        await self.session.refresh(role)
+        return self._to_domain(role)
+
+    async def update_role(self, role_id: int, role_data: RoleUpdate) -> RoleEntity:
+        role = await self.session.get(Role, role_id)
+        if not role:
+            raise RoleNotFoundError(role_id)
+
+        if role_data.name is not None:
+            role.name = role_data.name
+        if role_data.description is not None:
+            role.description = role_data.description
+        if role_data.is_active is not None:
+            role.is_active = role_data.is_active
+        if role_data.permission_names is not None:
+            # Get permissions by names
+            permissions_query = select(Permission).where(
+                or_(*[Permission.name == name for name in role_data.permission_names])
+            )
+            result = await self.session.exec(permissions_query)
+            permissions = result.all()
+
+            # Update role permissions
+            role.permissions = list(permissions)
+
+        await self.session.commit()
+        await self.session.refresh(role)
+        return self._to_domain(role)
+
+    async def delete_role(self, role_id: int) -> None:
+        role = await self.session.get(Role, role_id)
+        if not role:
+            raise RoleNotFoundError(role_id)
+        role.is_active = False
+        await self.session.commit()

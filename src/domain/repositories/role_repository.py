@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from src.domain.entities.role import Permission, Role
+from src.domain.entities.role import Permission, Role, RoleCreate, RoleUpdate
 
 
 class IRoleRepository(ABC):
@@ -40,4 +40,20 @@ class IRoleRepository(ABC):
         project_id: int,
         role_name: str
     ) -> None:
+        pass
+
+    @abstractmethod
+    async def create_role(self, role_data: RoleCreate) -> Role:
+        pass
+
+    @abstractmethod
+    async def update_role(self, role_id: int, role_data: RoleUpdate) -> Role:
+        pass
+
+    @abstractmethod
+    async def delete_role(self, role_id: int) -> None:
+        pass
+
+    @abstractmethod
+    async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
         pass

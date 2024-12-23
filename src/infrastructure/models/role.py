@@ -16,6 +16,8 @@ class Role(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True)
     description: Optional[str] = None
+    is_system_role: bool = Field(default=False)
+    is_active: bool = Field(default=True)
 
     # Relationship with users (for system-wide roles)
     users: List["User"] = Relationship(
