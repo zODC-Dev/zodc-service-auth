@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 from pydantic import EmailStr
 from sqlmodel import JSON, Field, Relationship, SQLModel
 
+from .base import BaseModelWithTimestamps
 from .user_project_role import UserProjectRole
 
 if TYPE_CHECKING:
@@ -19,10 +20,9 @@ class UserBase(SQLModel):
     permissions: List[str] = Field(default_factory=list, sa_type=JSON)
 
 
-class User(SQLModel, table=True):
+class User(BaseModelWithTimestamps, table=True):
     __tablename__ = "users"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
     name: str
     password: Optional[str] = Field(default=None, max_length=60)
@@ -30,10 +30,7 @@ class User(SQLModel, table=True):
     microsoft_token: Optional[str] = Field(default=None)
     microsoft_refresh_token: Optional[str] = Field(
         default=None, max_length=255)
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(),
-        sa_column_kwargs={"server_default": "NOW()", "nullable": False}
-    )
+
     is_active: bool = Field(default=True)
 
     # System-wide role (e.g., HR, System Admin)

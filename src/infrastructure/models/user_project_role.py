@@ -1,7 +1,8 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
+
+from .base import BaseModelWithTimestamps
 
 # Use ForwardRef for circular dependencies
 if TYPE_CHECKING:
@@ -10,16 +11,12 @@ if TYPE_CHECKING:
     from .user import User
 
 
-class UserProjectRole(SQLModel, table=True):
+class UserProjectRole(BaseModelWithTimestamps, table=True):
     __tablename__ = "user_project_roles"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
 
     user_id: int = Field(foreign_key="users.id")
     project_id: int = Field(foreign_key="projects.id")
     role_id: int = Field(foreign_key="roles.id")
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: Optional[datetime] = Field(default=None)
 
     user: "User" = Relationship(
         back_populates="user_project_roles", sa_relationship_kwargs={"lazy": "selectin"})
