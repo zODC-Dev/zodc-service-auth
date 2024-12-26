@@ -1,9 +1,12 @@
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, EmailStr
 
 from .base import BaseEntity
-from .role import Role
+
+if TYPE_CHECKING:
+    from .role import Role
+    from .user_project_role import UserProjectRole
 
 
 class User(BaseEntity):
@@ -15,14 +18,16 @@ class User(BaseEntity):
     microsoft_id: Optional[str] = None
     microsoft_token: Optional[str] = None
     microsoft_refresh_token: Optional[str] = None
-
+    user_project_roles: List["UserProjectRole"] = []
     # System-wide role
-    system_role: Optional[Role]
+    system_role: Optional["Role"] = None
+
 
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
     microsoft_refresh_token: Optional[str] = None
+
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None

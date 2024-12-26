@@ -1,9 +1,13 @@
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field
 
 from .base import BaseEntity
-from .permission import Permission
+
+if TYPE_CHECKING:
+    from .permission import Permission
+    from .user import User
+    from .user_project_role import UserProjectRole
 
 
 class Role(BaseEntity):
@@ -11,7 +15,9 @@ class Role(BaseEntity):
     description: Optional[str] = None
     is_system_role: bool = False
     is_active: bool = True
-    permissions: List[Permission] = []
+    permissions: List["Permission"] = []
+    user_project_roles: List["UserProjectRole"] = []
+    users: List["User"] = []
 
 
 class RoleCreate(BaseModel):

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -18,6 +19,8 @@ class Role(SQLModel, table=True):
     description: Optional[str] = None
     is_system_role: bool = Field(default=False)
     is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = Field(default=None)
 
     # Relationship with users (for system-wide roles)
     users: List["User"] = Relationship(
@@ -32,7 +35,7 @@ class Role(SQLModel, table=True):
     )
 
     # Direct relationship with UserProjectRole entries
-    project_assignments: List["UserProjectRole"] = Relationship(
+    user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="role",
         sa_relationship_kwargs={"lazy": "selectin"}
     )

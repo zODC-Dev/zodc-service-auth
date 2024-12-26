@@ -3,7 +3,8 @@ from typing import List, Optional
 from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.entities.role import Permission as PermissionEntity, Role as RoleEntity, RoleCreate, RoleUpdate
+from src.domain.entities.permission import Permission as PermissionEntity
+from src.domain.entities.role import Role as RoleEntity, RoleCreate, RoleUpdate
 from src.domain.exceptions.role_exceptions import RoleAlreadyExistsError, RoleNotFoundError
 from src.domain.repositories.role_repository import IRoleRepository
 from src.infrastructure.models.permission import Permission

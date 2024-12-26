@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, ForwardRef, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -8,10 +8,7 @@ if TYPE_CHECKING:
     from .project import Project
     from .role import Role
     from .user import User
-else:
-    User = ForwardRef("User")
-    Project = ForwardRef("Project")
-    Role = ForwardRef("Role")
+
 
 class UserProjectRole(SQLModel, table=True):
     __tablename__ = "user_project_roles"
@@ -21,9 +18,12 @@ class UserProjectRole(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id")
     project_id: int = Field(foreign_key="projects.id")
     role_id: int = Field(foreign_key="roles.id")
-    assigned_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = Field(default=None)
 
-    user: "User" = Relationship(back_populates="project_roles", sa_relationship_kwargs={"lazy": "selectin"})
-    project: "Project" = Relationship(back_populates="user_roles", sa_relationship_kwargs={"lazy": "selectin"})
-    role: "Role" = Relationship(back_populates="project_assignments", sa_relationship_kwargs={"lazy": "selectin"})
+    user: "User" = Relationship(
+        back_populates="user_project_roles", sa_relationship_kwargs={"lazy": "selectin"})
+    project: "Project" = Relationship(
+        back_populates="user_project_roles", sa_relationship_kwargs={"lazy": "selectin"})
+    role: "Role" = Relationship(
+        back_populates="user_project_roles", sa_relationship_kwargs={"lazy": "selectin"})

@@ -1,19 +1,30 @@
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel
 
 from .base import BaseEntity
-from .user_project_role import UserProjectRole
+
+if TYPE_CHECKING:
+    from .user_project_role import UserProjectRole
 
 
 class Project(BaseEntity):
+    name: str
     key: str
     description: Optional[str] = None
-    user_roles: List[UserProjectRole] = []
+    user_project_roles: List["UserProjectRole"] = []
+
+    class Config:
+        from_attributes = True
+
 
 class ProjectCreate(BaseModel):
+    name: str
     key: str
     description: Optional[str] = None
 
+
 class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    key: Optional[str] = None
     description: Optional[str] = None

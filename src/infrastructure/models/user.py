@@ -18,6 +18,7 @@ class UserBase(SQLModel):
     roles: List[str] = Field(default=["user"], sa_type=JSON)
     permissions: List[str] = Field(default_factory=list, sa_type=JSON)
 
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
@@ -27,7 +28,8 @@ class User(SQLModel, table=True):
     password: Optional[str] = Field(default=None, max_length=60)
     microsoft_id: Optional[str] = Field(default=None, unique=True)
     microsoft_token: Optional[str] = Field(default=None)
-    microsoft_refresh_token: Optional[str] = Field(default=None, max_length=255)
+    microsoft_refresh_token: Optional[str] = Field(
+        default=None, max_length=255)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(),
         sa_column_kwargs={"server_default": "NOW()", "nullable": False}
@@ -50,7 +52,7 @@ class User(SQLModel, table=True):
             "overlaps": "project_roles,user"
         }
     )
-    project_roles: List["UserProjectRole"] = Relationship(
+    user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={
             "lazy": "selectin",
@@ -58,16 +60,20 @@ class User(SQLModel, table=True):
         }
     )
 
+
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=60)
 
+
 class UserCreateSSO(UserBase):
     microsoft_id: str
+
 
 class UserRead(UserBase):
     id: int
     created_at: datetime
     microsoft_id: Optional[str] = None
+
 
 class UserUpdate(SQLModel):
     name: Optional[str] = None

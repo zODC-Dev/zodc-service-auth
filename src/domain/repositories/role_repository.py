@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from src.domain.entities.role import Permission, Role, RoleCreate, RoleUpdate
+from src.domain.entities.permission import Permission
+from src.domain.entities.role import Role, RoleCreate, RoleUpdate
 
 
 class IRoleRepository(ABC):
