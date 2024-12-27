@@ -3,7 +3,6 @@ from typing import List, Optional
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import log
 from src.domain.entities.project import Project as ProjectEntity, ProjectCreate, ProjectUpdate
 from src.domain.exceptions.project_exceptions import ProjectNotFoundError
 from src.domain.repositories.project_repository import IProjectRepository
@@ -30,13 +29,11 @@ class SQLAlchemyProjectRepository(IProjectRepository):
         return self._to_domain(project) if project else None
 
     async def get_project_by_key(self, key: str) -> Optional[ProjectEntity]:
-        log.info(f"Getting project by key: {key}")
         result = await self.session.exec(
             select(Project).where(Project.key ==
                                   key.upper())
         )
         project = result.first()
-        log.info(f"Project found: {project}")
         return self._to_domain(project) if project else None
 
     async def get_all_projects(self) -> List[ProjectEntity]:

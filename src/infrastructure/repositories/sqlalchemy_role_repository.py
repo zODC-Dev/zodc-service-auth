@@ -1,13 +1,18 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from sqlmodel import or_, select
+from sqlalchemy.orm import selectinload
+from sqlmodel import func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.permission import Permission as PermissionEntity
+from src.domain.entities.project import Project as ProjectEntity
 from src.domain.entities.role import Role as RoleEntity, RoleCreate, RoleUpdate
+from src.domain.entities.user import User as UserEntity
+from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
 from src.domain.exceptions.role_exceptions import RoleAlreadyExistsError, RoleNotFoundError
 from src.domain.repositories.role_repository import IRoleRepository
 from src.infrastructure.models.permission import Permission
+from src.infrastructure.models.project import Project
 from src.infrastructure.models.role import Role
 from src.infrastructure.models.role_permission import RolePermission
 from src.infrastructure.models.user import User
@@ -60,21 +65,38 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         project_id: int,
         role_name: str
     ) -> None:
+        """Assign or update a project role for a user"""
         # Get role
         role_result = await self.session.exec(
             select(Role).where(Role.name == role_name)
         )
         role = role_result.first()
-        if not role:
-            raise ValueError(f"Role {role_name} not found")
+        if not role or not role.is_active or role.id is None:
+            raise RoleNotFoundError(role_name=role_name)
 
-        # Create or update project role
-        user_project_role = UserProjectRole(
-            user_id=user_id,
-            project_id=project_id,
-            role_id=role.id
+        # Check if assignment already exists
+        existing_assignment = await self.session.exec(
+            select(UserProjectRole)
+            .where(
+                UserProjectRole.user_id == user_id,
+                UserProjectRole.project_id == project_id
+            )
         )
-        self.session.add(user_project_role)
+        assignment = existing_assignment.first()
+
+        if assignment:
+            # Update existing assignment
+            assignment.role_id = role.id
+            self.session.add(assignment)
+        else:
+            # Create new assignment
+            new_assignment = UserProjectRole(
+                user_id=user_id,
+                project_id=project_id,
+                role_id=role.id
+            )
+            self.session.add(new_assignment)
+
         await self.session.commit()
 
     async def get_user_system_role(self, user_id: int) -> Optional[RoleEntity]:
@@ -239,3 +261,141 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             raise RoleNotFoundError(role_id)
         role.is_active = False
         await self.session.commit()
+
+    async def get_all_users_with_roles(self) -> List[UserEntity]:
+        """Get all users with their system roles and project roles"""
+        result = await self.session.exec(
+            select(User)
+            .options(
+                selectinload(User.system_role),  # type: ignore
+                selectinload(User.user_project_roles)  # type: ignore
+                .selectinload(UserProjectRole.project),  # type: ignore
+                selectinload(User.user_project_roles)  # type: ignore
+                .selectinload(UserProjectRole.role)  # type: ignore
+            )
+        )
+        users = result.all()
+        return [self._user_to_domain(u) for u in users]
+
+    def _user_to_domain(self, user: User) -> UserEntity:
+        """Convert SQLAlchemy User model to domain entity"""
+        project_roles = []
+        for upr in user.user_project_roles:
+            if upr.project and upr.role:
+                project_roles.append({
+                    "project_name": upr.project.name,
+                    "role_name": upr.role.name
+                })
+
+        return UserEntity(
+            id=user.id,
+            email=user.email,
+            name=user.name or "",
+            system_role=user.system_role.name if user.system_role else None,
+            project_roles=project_roles
+        )
+
+    async def get_project_role_assignments(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        role_name: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> Tuple[List[UserProjectRoleEntity], int]:
+        """Get paginated and filtered user role assignments for a project"""
+        query = select(UserProjectRole)\
+            .options(
+                selectinload(UserProjectRole.user),  # type: ignore
+                selectinload(UserProjectRole.role)  # type: ignore
+        )\
+            .where(UserProjectRole.project_id == project_id)
+
+        # Apply role filter
+        if role_name:
+            query = query.join(Role).where(Role.name == role_name)
+
+        # Apply search filter
+        if search:
+            search_term = f"%{search}%"
+            query = query.join(User).where(
+                or_(
+                    User.name.ilike(search_term),  # type: ignore
+                    User.email.ilike(search_term)  # type: ignore
+                )
+            )
+
+        # Get total count
+        count_query = select(func.count()).select_from(query.subquery())
+        total = await self.session.scalar(count_query)
+        if total is None:
+            total = 0
+
+        # Apply pagination
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
+        # Execute query
+        result = await self.session.exec(query)
+        assignments = list(result.all())
+
+        # Convert to domain entities
+        domain_assignments = [
+            self._to_domain_user_project_role(a) for a in assignments]
+
+        return domain_assignments, total
+
+    async def get_project_by_id(self, project_id: int) -> Optional[ProjectEntity]:
+        query = select(Project).where(Project.id == project_id)
+        result = await self.session.exec(query)
+        project = result.first()
+        return self._to_domain_project(project) if project else None
+
+    async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
+        query = select(User).where(User.id == user_id)
+        result = await self.session.exec(query)
+        user = result.first()
+        return self._to_domain_user(user) if user else None
+
+    def _to_domain_user_project_role(self, upr: UserProjectRole) -> UserProjectRoleEntity:
+        return UserProjectRoleEntity(
+            id=upr.id,
+            user_id=upr.user_id,
+            project_id=upr.project_id,
+            role_id=upr.role_id,
+            user=self._to_domain_user(upr.user) if upr.user else None,
+            role=self._to_domain_role(upr.role) if upr.role else None,
+            project=self._to_domain_project(
+                upr.project) if upr.project else None,
+            created_at=upr.created_at,
+            updated_at=upr.updated_at
+        )
+
+    def _to_domain_user(self, user: User) -> UserEntity:
+        return UserEntity(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+
+    def _to_domain_role(self, role: Role) -> RoleEntity:
+        return RoleEntity(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            is_system_role=role.is_system_role,
+            is_active=role.is_active,
+            created_at=role.created_at,
+            updated_at=role.updated_at
+        )
+
+    def _to_domain_project(self, project: Project) -> ProjectEntity:
+        return ProjectEntity(
+            id=project.id,
+            name=project.name,
+            key=project.key,
+            description=project.description,
+            created_at=project.created_at,
+            updated_at=project.updated_at
+        )

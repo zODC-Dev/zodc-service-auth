@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from src.app.controllers.role_controller import RoleController
 from src.app.decorators.auth_decorator import require_permissions
@@ -11,7 +11,7 @@ from src.app.schemas.requests.role import (
     RoleCreateRequest,
     RoleUpdateRequest,
 )
-from src.app.schemas.responses.role import RoleResponse
+from src.app.schemas.responses.role import PaginatedUserRoleAssignmentResponse, RoleResponse
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ async def create_role(
 
 
 @router.get("/", response_model=List[RoleResponse])
-@require_permissions(system_roles=["user"])
+# @require_permissions(system_roles=["user"])
 async def get_roles(
     request: Request,
     include_deleted: bool = False,
@@ -54,6 +54,24 @@ async def get_roles(
         List of role responses
     """
     return await controller.get_roles(include_deleted)
+
+
+@router.post("/system")
+@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
+async def assign_system_role(
+    request: Request,
+    role_data: AssignSystemRoleRequest,
+    controller: RoleController = Depends(get_role_controller)
+):
+    """Assign a system role to a user.
+
+    Args:
+        request: FastAPI request object
+        role_data: Role assignment data
+        controller: Role controller instance
+    """
+    await controller.assign_system_role(role_data)
+    return {"message": "Role assigned successfully"}
 
 
 @router.put("/{role_id}", response_model=RoleResponse)
@@ -78,37 +96,57 @@ async def update_role(
     return await controller.update_role(role_id, role_data)
 
 
-@router.post("/assign/system")
-@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
-async def assign_system_role(
+@router.get("/projects/{project_id}", response_model=PaginatedUserRoleAssignmentResponse)
+# @require_permissions(project_roles=["project_owner"])
+async def get_project_roles(
     request: Request,
-    role_data: AssignSystemRoleRequest,
+    project_id: int,
+    page: int = Query(1, ge=1, description="Page number (starts from 1)"),
+    page_size: int = Query(
+        10, ge=1, le=100, description="Number of items per page"),
+    role_name: Optional[str] = Query(None, description="Filter by role name"),
+    search: Optional[str] = Query(
+        None, description="Search by user name or email"),
     controller: RoleController = Depends(get_role_controller)
 ):
-    """Assign a system role to a user.
+    """Get all user role assignments for a specific project with pagination and filters.
 
     Args:
         request: FastAPI request object
-        role_data: Role assignment data
+        project_id: ID of the project
+        page: Page number (starts from 1)
+        page_size: Number of items per page (1-100)
+        role_name: Optional filter by role name
+        search: Optional search term for user name or email
         controller: Role controller instance
+
+    Returns:
+        Paginated list of user role assignments
     """
-    await controller.assign_system_role(role_data)
-    return {"message": "Role assigned successfully"}
+    return await controller.get_project_role_assignments(
+        project_id=project_id,
+        page=page,
+        page_size=page_size,
+        role_name=role_name,
+        search=search
+    )
 
 
-@router.post("/assign/project")
-@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
-async def assign_project_role(
+@router.post("/projects/{project_id}")
+@require_permissions(project_roles=["project_owner"])
+async def assign_project_roles(
     request: Request,
-    role_data: AssignProjectRoleRequest,
+    project_id: int,
+    assignments: List[AssignProjectRoleRequest],
     controller: RoleController = Depends(get_role_controller)
 ):
-    """Assign a project role to a user.
+    """Assign or update roles for multiple users in a project.
 
     Args:
         request: FastAPI request object
-        role_data: Role assignment data
+        project_id: ID of the project
+        assignments: List of role assignments
         controller: Role controller instance
     """
-    await controller.assign_project_role(role_data)
-    return {"message": "Role assigned successfully"}
+    await controller.assign_project_roles(project_id, assignments)
+    return {"message": "Roles assigned successfully"}

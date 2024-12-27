@@ -11,7 +11,7 @@ fastapi = "^0.115.2"
 uvicorn = "^0.32.0"
 SQLAlchemy = "^2.0.36"
 alembic = "^1.13.3"
-pydantic = {version = "2.9.2", extras = ["email"]}
+pydantic = {extras = ["email"], version = "^2.10.4"}
 loguru = "^0.7.2"
 asyncpg = "^0.30.0"
 pydantic-settings = "^2.6.0"

@@ -25,7 +25,8 @@ class JWTTokenService(ITokenService):
     async def create_app_token(self, user: UserEntity) -> AuthToken:
         """Create new JWT token"""
         try:
-            expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            expires_delta = timedelta(
+                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             expires_at = datetime.now() + expires_delta
 
             if user.id is None:
@@ -79,7 +80,6 @@ class JWTTokenService(ITokenService):
                 settings.JWT_SECRET,
                 algorithms=[settings.JWT_ALGORITHM]
             )
-            log.info(f"Payload: {payload}")
 
             # Convert system_role string to Role entity
             system_role_name = payload.get("system_role")
@@ -113,7 +113,8 @@ class JWTTokenService(ITokenService):
         # Logic to retrieve from the database if not cached
         try:
             result = await db.exec(
-                select(UserModel.microsoft_token).where(UserModel.id == user_id)
+                select(UserModel.microsoft_token).where(
+                    UserModel.id == user_id)
             )
             db_token = result.one_or_none()
             if not db_token:

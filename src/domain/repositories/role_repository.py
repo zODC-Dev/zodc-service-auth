@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.domain.entities.permission import Permission
+from src.domain.entities.project import Project
 from src.domain.entities.role import Role, RoleCreate, RoleUpdate
+from src.domain.entities.user import User
+from src.domain.entities.user_project_role import UserProjectRole
 
 
 class IRoleRepository(ABC):
@@ -57,4 +60,31 @@ class IRoleRepository(ABC):
 
     @abstractmethod
     async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
+        pass
+
+    @abstractmethod
+    async def get_all_users_with_roles(self) -> List[User]:
+        """Get all users with their system roles"""
+        pass
+
+    @abstractmethod
+    async def get_project_role_assignments(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        role_name: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> Tuple[List[UserProjectRole], int]:
+        """Get paginated and filtered user role assignments for a project"""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_project_by_id(self, project_id: int) -> Optional[Project]:
+        """Get project by ID"""
+        pass
+
+    @abstractmethod
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+        """Get user by ID"""
         pass

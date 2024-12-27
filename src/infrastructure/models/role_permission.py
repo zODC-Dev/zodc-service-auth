@@ -1,8 +1,11 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field
 
 from .base import BaseModel
+
+if TYPE_CHECKING:
+    pass
 
 
 class RolePermission(BaseModel, table=True):

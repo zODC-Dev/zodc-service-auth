@@ -1,6 +1,5 @@
 from typing import List
 
-from src.configs.logger import log
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
 from src.domain.exceptions.project_exceptions import ProjectKeyAlreadyExistsError, ProjectNotFoundError
 from src.domain.repositories.project_repository import IProjectRepository
@@ -11,11 +10,8 @@ class ProjectService:
         self.project_repository = project_repository
 
     async def create_project(self, project_data: ProjectCreate) -> Project:
-        log.info(f"Creating project with key: {project_data.key}")
         existing_project = await self.project_repository.get_project_by_key(project_data.key)
-        log.info(f"Existing project: {existing_project}")
         if existing_project:
-            log.info(f"Project with key '{project_data.key}' already exists")
             raise ProjectKeyAlreadyExistsError(
                 f"Project with key '{project_data.key}' already exists")
         return await self.project_repository.create_project(project_data)

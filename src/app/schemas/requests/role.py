@@ -46,7 +46,7 @@ class AssignSystemRoleRequest(BaseModel):
 
 
 class AssignProjectRoleRequest(BaseModel):
-    user_id: int = Field(..., description="ID of the user")
     project_id: int = Field(..., description="ID of the project")
+    user_id: int = Field(..., description="ID of the user")
     role_name: str = Field(...,
                            description="Name of the project role to assign")

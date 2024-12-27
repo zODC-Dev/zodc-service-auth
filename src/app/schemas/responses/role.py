@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from src.app.schemas.responses.common import PaginatedResponse
 from src.domain.entities.role import Role
 
 
@@ -28,3 +29,17 @@ class RoleResponse(BaseModel):
             created_at=role.created_at,
             updated_at=role.updated_at
         )
+
+
+class UserRoleAssignmentResponse(BaseModel):
+    user_id: int
+    user_name: str
+    user_email: str
+    role_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PaginatedUserRoleAssignmentResponse(PaginatedResponse[UserRoleAssignmentResponse]):
+    pass

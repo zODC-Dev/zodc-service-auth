@@ -7,7 +7,6 @@ from src.app.decorators.auth_decorator import require_permissions
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.project import ProjectCreateRequest, ProjectUpdateRequest
 from src.app.schemas.responses.project import ProjectResponse
-from src.configs.logger import log
 
 router = APIRouter()
 
@@ -24,7 +23,6 @@ async def create_project(
     controller: ProjectController = Depends(get_project_controller)
 ):
     """Create a new project."""
-    log.info(f"Project data: {project_data}")
     return await controller.create_project(project_data)
 
 
@@ -42,7 +40,7 @@ async def get_project(
 
 
 @router.get("/", response_model=List[ProjectResponse])
-@require_permissions(system_roles=["user"])
+# @require_permissions(system_roles=["user"])
 async def get_all_projects(
     request: Request,
     controller: ProjectController = Depends(get_project_controller)
