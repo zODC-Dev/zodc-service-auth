@@ -1,26 +1,17 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 
-class Attendee(BaseModel):
-    email: str
-    name: Optional[str]
-    response_status: Optional[str] = None
-
-
-class CalendarEvent(BaseModel):
+class CalendarEventResponse(BaseModel):
     id: str
-    subject: str
-    start: datetime
-    end: datetime
-    organizer: Optional[Attendee]
-    attendees: List[Attendee] = []
-    is_online_meeting: bool = False
-    online_meeting_url: Optional[str]
+    title: str
+    start_time: datetime
+    end_time: datetime
+    # Add other necessary fields
 
 
 class CalendarEventsResponse(BaseModel):
-    events: List[CalendarEvent]
-    next_link: Optional[str] = None
+    events: List[CalendarEventResponse]
+    next_link: Optional[HttpUrl] = None

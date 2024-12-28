@@ -1,9 +1,10 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.app.controllers.task_controller import TaskController
+from src.app.decorators.auth_decorator import require_permissions
 from src.app.schemas.task import TaskCreate, TaskResponse, TaskUpdate
 from src.app.services.task_service import TaskService
 from src.configs.database import get_db
@@ -24,6 +25,14 @@ async def create_task(
 ):
     """Create new task"""
     return await controller.create_task(task)
+
+@router.get("/protected")
+@require_permissions(
+    system_roles=["user"]
+)
+async def protected_route(request: Request):
+    """Test protected route"""
+    return {"message": "You have access!"}
 
 @router.get("/{task_id}", response_model=TaskResponse)
 async def get_task(

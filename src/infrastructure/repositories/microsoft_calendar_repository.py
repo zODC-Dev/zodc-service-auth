@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.domain.entities.calendar import CalendarEvent, CalendarEventsList
 from src.domain.exceptions.calendar_exceptions import CalendarError
 from src.domain.repositories.calendar_repository import ICalendarRepository
@@ -28,7 +28,7 @@ class MicrosoftCalendarRepository(ICalendarRepository):
     ) -> CalendarEventsList:
         try:
             # Get Microsoft token
-            access_token = await self.token_service.get_microsoft_token(
+            microsoft_access_token = await self.token_service.get_microsoft_token(
                 user_id,
                 self.db_session
             )
@@ -46,20 +46,21 @@ class MicrosoftCalendarRepository(ICalendarRepository):
                 response = await client.get(
                     url,
                     params=params,
-                    headers=self._get_headers(access_token)
+                    headers=self._get_headers(microsoft_access_token)
                 )
 
                 if response.status_code == 200:
                     data = response.json()
                     return self._parse_response(data)
                 else:
-                    logger.error(
-                        f"Microsoft Graph API error: {response.status_code} - {response.text}"
+                    log.error(
+                        f"Microsoft Graph API error: {
+                            response.status_code} - {response.text}"
                     )
                     raise CalendarError("Failed to fetch calendar events")
 
         except Exception as e:
-            logger.error(f"Calendar repository error: {str(e)}")
+            log.error(f"Calendar repository error: {str(e)}")
             raise CalendarError("Failed to fetch calendar events") from e
 
     def _build_query_params(
@@ -90,24 +91,29 @@ class MicrosoftCalendarRepository(ICalendarRepository):
             "Accept": "application/json"
         }
 
+    def _parse_event(self, event: Dict[str, Any]) -> CalendarEvent:
+        online_meeting = event.get("onlineMeeting")
+        online_meeting_url = online_meeting.get(
+            "joinUrl") if online_meeting else None
+        return CalendarEvent(
+            id=event["id"],
+            subject=event["subject"],
+            start_time=datetime.fromisoformat(
+                event["start"]["dateTime"].replace('Z', '')),
+            end_time=datetime.fromisoformat(
+                event["end"]["dateTime"].replace('Z', '')),
+            organizer_email=event["organizer"]["emailAddress"]["address"],
+            is_online_meeting=event.get("isOnlineMeeting", False),
+            online_meeting_url=online_meeting_url,
+            attendees=[
+                attendee["emailAddress"]["address"]
+                for attendee in event.get("attendees", [])
+            ]
+        )
+
     def _parse_response(self, data: Dict[str, Any]) -> CalendarEventsList:
         """Parse Microsoft Graph API response to domain entity"""
-        events = [
-            CalendarEvent(
-                id=event["id"],
-                subject=event["subject"],
-                start_time=datetime.fromisoformat(event["start"]["dateTime"].replace('Z', '')),
-                end_time=datetime.fromisoformat(event["end"]["dateTime"].replace('Z', '')),
-                organizer_email=event["organizer"]["emailAddress"]["address"],
-                is_online_meeting=event.get("isOnlineMeeting", False),
-                online_meeting_url=event.get("onlineMeeting", {}).get("joinUrl"),
-                attendees=[
-                    attendee["emailAddress"]["address"]
-                    for attendee in event.get("attendees", [])
-                ]
-            )
-            for event in data["value"]
-        ]
+        events = [self._parse_event(event) for event in data.get("value", [])]
 
         return CalendarEventsList(
             events=events,

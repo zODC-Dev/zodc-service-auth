@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any, Dict, Optional
 
 from src.domain.entities.user import User
@@ -6,19 +7,37 @@ from src.domain.exceptions.user_exceptions import (
     UserNotFoundError,
 )
 from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.redis_service import IRedisService
 
 
 class UserService:
-    def __init__(self, user_repository: IUserRepository):
+    def __init__(self, user_repository: IUserRepository, redis_service: IRedisService):
         self.user_repository = user_repository
+        self.redis_service = redis_service
+        self.cache_ttl = timedelta(minutes=5)
 
     async def get_current_user(self, user_id: int) -> User:
         """Get current user information"""
+        cache_key = f"user:{user_id}"
+
+        # Try to get from cache
+        cached_user = await self.redis_service.get(cache_key)
+        if cached_user:
+            return User.model_validate(cached_user)
+
+        # Get from database
         user = await self.user_repository.get_user_by_id(user_id)
         if not user:
             raise UserNotFoundError(f"User with id {user_id} not found")
         if not user.is_active:
             raise UserInactiveError(f"User with id {user_id} is inactive")
+
+        # Cache user data
+        await self.redis_service.set(
+            key=cache_key,
+            value=user.model_dump(),
+            expiry=int(self.cache_ttl.total_seconds())
+        )
         return user
 
     async def get_user_by_email(self, email: str) -> Optional[User]:
@@ -30,5 +49,5 @@ class UserService:
 
     def _validate_update_data(self, update_data: Dict[str, Any]) -> bool:
         """Validate user update data"""
-        allowed_fields = {"full_name", "email", "is_active"}
+        allowed_fields = {"name", "email", "is_active"}
         return all(key in allowed_fields for key in update_data.keys())

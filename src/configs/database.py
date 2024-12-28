@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
+from src.configs.logger import log
 
 from .settings import settings
 
@@ -30,4 +30,4 @@ async def init_db() -> None:
     """Init database connection at runtime"""
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-        logger.info("Database tables created")
+        log.info("Database tables created")

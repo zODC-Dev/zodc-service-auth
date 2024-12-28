@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.domain.entities.calendar import CalendarEventsList
 from src.domain.exceptions.calendar_exceptions import CalendarError
 from src.domain.repositories.calendar_repository import ICalendarRepository
@@ -28,5 +28,5 @@ class CalendarService:
                 next_link=next_link
             )
         except Exception as e:
-            logger.error(f"Error getting calendar events for user {user_id}: {str(e)}")
+            log.error(f"Error getting calendar events for user {user_id}: {str(e)}")
             raise CalendarError("Failed to fetch calendar events") from e

@@ -4,7 +4,7 @@ from typing import Any, Dict, cast
 from aiohttp import ClientSession
 import jwt
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.auth import MicrosoftIdentity
 from src.domain.exceptions.auth_exceptions import SSOError
@@ -13,7 +13,8 @@ from src.domain.services.sso_service import ISSOService
 
 class MicrosoftSSOService(ISSOService):
     COMMON_TENANT = 'common'
-    TOKEN_ENDPOINT = f"https://login.microsoftonline.com/{COMMON_TENANT}/oauth2/v2.0"
+    TOKEN_ENDPOINT = f"https://login.microsoftonline.com/{
+        COMMON_TENANT}/oauth2/v2.0"
     SCOPE = "openid profile email offline_access User.Read"
 
     async def generate_auth_url(self, code_challenge: str) -> str:
@@ -35,7 +36,7 @@ class MicrosoftSSOService(ISSOService):
 
             return auth_url
         except Exception as e:
-            logger.error(f"Failed to generate auth URL: {str(e)}")
+            log.error(f"Failed to generate auth URL: {str(e)}")
             raise SSOError("Failed to generate authentication URL") from e
 
     async def exchange_code(
@@ -48,12 +49,8 @@ class MicrosoftSSOService(ISSOService):
             # Exchange code for tokens
             token_data = await self._exchange_code_for_token(code, code_verifier)
 
-            logger.info(f"token_data: {token_data}")
-
             # Validate and decode token
             user_info = self._validate_microsoft_token(token_data["id_token"])
-
-            logger.info(f"user_info: {user_info}")
 
             # Convert to domain entity
             return MicrosoftIdentity(
@@ -65,7 +62,7 @@ class MicrosoftSSOService(ISSOService):
                 scope=token_data.get("scope", "")
             )
         except Exception as e:
-            logger.error(f"Failed to exchange code: {str(e)}")
+            log.error(f"Failed to exchange code: {str(e)}")
             raise SSOError("Failed to authenticate with Microsoft") from e
 
     async def _exchange_code_for_token(self, code: str, code_verifier: str) -> Dict[str, Any]:
@@ -83,7 +80,8 @@ class MicrosoftSSOService(ISSOService):
             ) as response:
                 data: Dict[str, Any] = await response.json()
                 if "error" in data:
-                    logger.error(f"Token exchange failed: {data.get('error_description')}")
+                    log.error(f"Token exchange failed: {
+                              data.get('error_description')}")
                     raise SSOError("Failed to exchange authorization code")
                 return data
 
@@ -98,7 +96,7 @@ class MicrosoftSSOService(ISSOService):
             )
             return data
         except jwt.InvalidTokenError as e:
-            logger.error(f"Invalid token: {str(e)}")
+            log.error(f"Invalid token: {str(e)}")
             raise SSOError("Invalid Microsoft token") from e
 
     def _generate_state_token(self) -> str:

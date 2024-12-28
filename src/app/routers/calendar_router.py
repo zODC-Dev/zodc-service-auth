@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from src.app.controllers.calendar_controller import CalendarController
-from src.app.dependencies.auth import get_current_user
+from src.app.dependencies.auth import get_current_user_id
 from src.app.dependencies.calendar import get_calendar_controller
 from src.app.schemas.responses.calendar import CalendarEventsResponse
 
@@ -16,7 +16,7 @@ async def get_calendar_events(
     end_time: Optional[datetime] = Query(None),
     page_size: int = Query(50, gt=0, le=100),
     next_link: Optional[str] = Query(None),
-    current_user_id: int = Depends(get_current_user),
+    current_user_id: int = Depends(get_current_user_id),
     controller: CalendarController = Depends(get_calendar_controller)
 ):
     """Get user's calendar events with optional date range and pagination."""

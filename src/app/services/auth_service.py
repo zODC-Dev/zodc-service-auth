@@ -1,4 +1,3 @@
-from src.configs.logger import logger
 from src.domain.entities.auth import AuthToken, SSOCredentials, UserCredentials
 from src.domain.exceptions.auth_exceptions import (
     InvalidCredentialsError,
@@ -49,15 +48,10 @@ class AuthService:
             sso_credentials.code_verifier
         )
 
-        logger.info(f"src.app.services.auth_service: microsoft_info {microsoft_info}")
-
         # Get or create user
         user = await self.user_repository.get_user_by_email(microsoft_info.email)
         if user is None:
             user = await self.auth_repository.create_sso_user(microsoft_info)
-
-
-        logger.info(f"src.app.services.auth_service: user {user}")
 
         if user.id is None:
             raise UserCreationError("Something went wrong")
@@ -69,11 +63,8 @@ class AuthService:
             expiry=microsoft_info.expires_in
         )
 
-
         # Create access token
         auth_token = await self.token_service.create_app_token(user)
-
-        logger.info(f"src.app.services.auth_service auth_token {auth_token}")
 
         # Store refresh token if provided
         if auth_token.refresh_token:

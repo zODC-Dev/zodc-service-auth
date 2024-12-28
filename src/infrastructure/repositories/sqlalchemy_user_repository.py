@@ -3,7 +3,7 @@ from typing import Optional
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.configs.logger import logger
+from src.configs.logger import log
 from src.domain.entities.user import User as UserEntity
 from src.domain.repositories.user_repository import IUserRepository
 from src.infrastructure.models.user import User as UserModel, UserCreate
@@ -28,7 +28,7 @@ class SQLAlchemyUserRepository(IUserRepository):
             user = result.first()
             return self._to_domain(user) if user else None
         except Exception as e:
-            logger.error(f"{str(e)}")
+            log.error(f"{str(e)}")
             return None
 
     async def create_user(self, user_data: UserCreate) -> UserEntity:
@@ -43,12 +43,11 @@ class SQLAlchemyUserRepository(IUserRepository):
         return UserEntity(
             id=db_user.id,
             email=db_user.email,
-            full_name=db_user.full_name,
+            name=db_user.name,
             is_active=db_user.is_active,
             created_at=db_user.created_at,
             microsoft_id=db_user.microsoft_id,
             microsoft_refresh_token=db_user.microsoft_refresh_token,
             microsoft_token=db_user.microsoft_token,
-            roles=db_user.roles,
-            permissions=db_user.permissions,
+            system_role=db_user.system_role,
         )

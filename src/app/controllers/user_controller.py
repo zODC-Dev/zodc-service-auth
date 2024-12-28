@@ -16,4 +16,5 @@ class UserController:
         except UserNotFoundError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail="Failed to get user information") from e
+            raise HTTPException(
+                status_code=500, detail="Failed to get user information") from e
