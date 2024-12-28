@@ -1,12 +1,30 @@
 from enum import Enum
 
 
-class SystemPermissions(str, Enum):
-    MANAGE_USERS = "system.users.manage"
-    MANAGE_ROLES = "system.roles.manage"
-    # Add more system permissions
+class PermissionGroup(Enum):
+    SYSTEM = "system"
+    PROJECT = "project"
+    MASTERFLOW = "masterflow"
 
-class ProjectPermissions(str, Enum):
-    VIEW_PROJECT = "project.view"
-    MANAGE_TASKS = "project.tasks.manage"
-    # Add more project permissions
+
+class SystemPermissions(Enum):
+    CREATE_ROLE = "system-role.create"
+    VIEW_ROLE = "system-role.view"
+    MANAGE_ROLE = "system-role.manage"
+    MANAGE_USER = "system-user.manage"
+    VIEW_USER = "system-user.view"
+
+
+class ProjectPermissions(Enum):
+    CREATE = "project.create"
+    VIEW = "project.view"
+    UPDATE = "project.update"
+    DELETE = "project.delete"
+    MANAGE_MEMBER = "project.manage-member"
+
+
+class MasterflowPermissions(Enum):
+    CREATE = "masterflow.create"
+    VIEW = "masterflow.view"
+    UPDATE = "masterflow.update"
+    DELETE = "masterflow.delete"

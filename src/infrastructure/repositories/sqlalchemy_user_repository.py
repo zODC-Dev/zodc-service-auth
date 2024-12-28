@@ -49,5 +49,4 @@ class SQLAlchemyUserRepository(IUserRepository):
             microsoft_id=db_user.microsoft_id,
             microsoft_refresh_token=db_user.microsoft_refresh_token,
             microsoft_token=db_user.microsoft_token,
-            system_role=db_user.system_role,
         )

@@ -25,6 +25,7 @@ class RoleUpdateRequest(BaseModel):
     description: Optional[str] = Field(None, max_length=200)
     permission_names: Optional[List[str]] = None
     is_active: Optional[bool] = None
+    is_system_role: Optional[bool] = None
 
     @field_validator('name')
     @classmethod
@@ -46,7 +47,6 @@ class AssignSystemRoleRequest(BaseModel):
 
 
 class AssignProjectRoleRequest(BaseModel):
-    project_id: int = Field(..., description="ID of the project")
     user_id: int = Field(..., description="ID of the user")
     role_name: str = Field(...,
                            description="Name of the project role to assign")

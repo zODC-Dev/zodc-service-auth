@@ -1,15 +1,17 @@
 from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import Field
-
-from .base import BaseModel
+from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    pass
+    from .permission import Permission
+    from .role import Role
 
 
-class RolePermission(BaseModel, table=True):
+class RolePermission(SQLModel, table=True):
     __tablename__ = "role_permissions"
+
+    # id: Optional[int] = Field(default=None, primary_key=True,
+    #                           index=True, sa_column_kwargs={"autoincrement": True})
 
     role_id: Optional[int] = Field(
         default=None,
@@ -21,3 +23,8 @@ class RolePermission(BaseModel, table=True):
         foreign_key="permissions.id",
         primary_key=True
     )
+
+    role: "Role" = Relationship(
+        back_populates="role_permissions", sa_relationship_kwargs={"lazy": "selectin"})
+    permission: "Permission" = Relationship(
+        back_populates="role_permissions", sa_relationship_kwargs={"lazy": "selectin"})

@@ -1,7 +1,8 @@
 from typing import List, Optional, Tuple
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from sqlmodel import func, or_, select
+from sqlmodel import asc, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.permission import Permission as PermissionEntity
@@ -9,7 +10,15 @@ from src.domain.entities.project import Project as ProjectEntity
 from src.domain.entities.role import Role as RoleEntity, RoleCreate, RoleUpdate
 from src.domain.entities.user import User as UserEntity
 from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
-from src.domain.exceptions.role_exceptions import RoleAlreadyExistsError, RoleNotFoundError
+from src.domain.exceptions.role_exceptions import (
+    InvalidPermissionsError,
+    RoleAlreadyExistsError,
+    RoleCreateError,
+    RoleError,
+    RoleNotFoundError,
+    RoleUpdateError,
+)
+from src.domain.exceptions.user_exceptions import UserNotFoundError
 from src.domain.repositories.role_repository import IRoleRepository
 from src.infrastructure.models.permission import Permission
 from src.infrastructure.models.project import Project
@@ -22,6 +31,68 @@ from src.infrastructure.models.user_project_role import UserProjectRole
 class SQLAlchemyRoleRepository(IRoleRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _permission_to_domain(self, permission: Permission) -> PermissionEntity:
+        return PermissionEntity(
+            id=permission.id,
+            name=permission.name,
+            description=permission.description
+        )
+
+    def _to_domain(self, role: Role) -> RoleEntity:
+        return RoleEntity(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            is_system_role=role.is_system_role,
+            is_active=role.is_active,
+            permissions=[self._permission_to_domain(
+                p) for p in role.permissions]
+        )
+
+    def _to_domain_user_project_role(self, upr: UserProjectRole) -> UserProjectRoleEntity:
+        return UserProjectRoleEntity(
+            id=upr.id,
+            user_id=upr.user_id,
+            project_id=upr.project_id,
+            role_id=upr.role_id,
+            user=self._to_domain_user(upr.user) if upr.user else None,
+            role=self._to_domain_role(upr.role) if upr.role else None,
+            project=self._to_domain_project(
+                upr.project) if upr.project else None,
+            created_at=upr.created_at,
+            updated_at=upr.updated_at
+        )
+
+    def _to_domain_user(self, user: User) -> UserEntity:
+        return UserEntity(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+
+    def _to_domain_role(self, role: Role) -> RoleEntity:
+        return RoleEntity(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            is_system_role=role.is_system_role,
+            is_active=role.is_active,
+            created_at=role.created_at,
+            updated_at=role.updated_at
+        )
+
+    def _to_domain_project(self, project: Project) -> ProjectEntity:
+        return ProjectEntity(
+            id=project.id,
+            name=project.name,
+            key=project.key,
+            description=project.description,
+            created_at=project.created_at,
+            updated_at=project.updated_at
+        )
 
     async def get_role_by_name(self, name: str) -> Optional[RoleEntity]:
         result = await self.session.exec(
@@ -40,24 +111,29 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         return [self._permission_to_domain(p) for p in permissions]
 
     async def assign_system_role_to_user(self, user_id: int, role_name: str) -> None:
-        # Get role
-        role_result = await self.session.exec(
-            select(Role).where(Role.name == role_name)
-        )
-        role = role_result.first()
-        if not role:
-            raise ValueError(f"Role {role_name} not found")
+        try:
+            # Get role
+            role_result = await self.session.exec(
+                select(Role).where(Role.name == role_name)
+            )
+            role = role_result.first()
+            if not role:
+                raise RoleNotFoundError(role_name=role_name)
 
-        # Update user's system role
-        user_result = await self.session.exec(
-            select(User).where(User.id == user_id)
-        )
-        user = user_result.first()
-        if not user:
-            raise ValueError(f"User {user_id} not found")
+            # Update user's system role
+            user_result = await self.session.exec(
+                select(User).where(User.id == user_id)
+            )
+            user = user_result.first()
+            if not user:
+                raise UserNotFoundError("User not found")
 
-        user.role_id = role.id
-        await self.session.commit()
+            user.role_id = role.id
+            await self.session.commit()
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            raise RoleError(
+                f"Failed to assign system role to user: {str(e)}") from e
 
     async def assign_project_role_to_user(
         self,
@@ -127,69 +203,6 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         roles = result.all()
         return [self._to_domain(r) for r in roles]
 
-    async def get_user_permissions(
-        self,
-        user_id: int,
-        project_id: Optional[int] = None
-    ) -> List[PermissionEntity]:
-        if project_id:
-            # Execute queries separately and combine results in Python
-            # Get system permissions
-            system_perms = await self.session.exec(
-                select(Permission)
-                .join(RolePermission)
-                .join(Role)
-                .join(User)
-                .where(User.id == user_id)
-            )
-
-            # Get project permissions
-            project_perms = await self.session.exec(
-                select(Permission)
-                .join(RolePermission)
-                .join(Role)
-                .join(UserProjectRole)
-                .where(
-                    UserProjectRole.user_id == user_id,
-                    UserProjectRole.project_id == project_id
-                )
-            )
-
-            # Convert to lists before combining
-            permissions = list(system_perms.all()) + list(project_perms.all())
-            # Remove duplicates if needed
-            unique_permissions = list({p.id: p for p in permissions}.values())
-            return [self._permission_to_domain(p) for p in unique_permissions]
-        else:
-            # Just get system permissions
-            result = await self.session.exec(
-                select(Permission)
-                .join(RolePermission)
-                .join(Role)
-                .join(User)
-                .where(User.id == user_id)
-            )
-            permissions = list(result.all())
-            return [self._permission_to_domain(p) for p in permissions]
-
-    def _to_domain(self, role: Role) -> RoleEntity:
-        return RoleEntity(
-            id=role.id,
-            name=role.name,
-            description=role.description,
-            is_system_role=role.is_system_role,
-            is_active=role.is_active,
-            permissions=[self._permission_to_domain(
-                p) for p in role.permissions]
-        )
-
-    def _permission_to_domain(self, permission: Permission) -> PermissionEntity:
-        return PermissionEntity(
-            id=permission.id,
-            name=permission.name,
-            description=permission.description
-        )
-
     async def get_all_roles(self, include_deleted: bool = False) -> List[RoleEntity]:
         query = select(Role)
         if not include_deleted:
@@ -199,103 +212,154 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         return [self._to_domain(r) for r in roles]
 
     async def create_role(self, role_data: RoleCreate) -> RoleEntity:
-        # Check if role already exists
-        existing_role = await self.get_role_by_name(role_data.name)
-        if existing_role:
-            raise RoleAlreadyExistsError(role_data.name)
+        try:
+            # Check if role already exists
+            existing_role = await self.get_role_by_name(role_data.name)
+            if existing_role:
+                raise RoleAlreadyExistsError(role_data.name)
 
-        # Create role without permissions first
-        role = Role(
-            name=role_data.name,
-            description=role_data.description or "",
-            is_system_role=role_data.is_system_role,
-            is_active=role_data.is_active
-        )
-        self.session.add(role)
-
-        # If permission_names are provided, fetch and link permissions
-        if role_data.permission_names:
-            # Get permissions by names
-            permissions_query = select(Permission).where(
-                or_(*[Permission.name == name for name in role_data.permission_names])
+            # Create role
+            role = Role(
+                name=role_data.name,
+                description=role_data.description or "",
+                is_system_role=role_data.is_system_role,
+                is_active=role_data.is_active
             )
-            result = await self.session.exec(permissions_query)
-            permissions = result.all()
+            self.session.add(role)
+            await self.session.commit()  # Commit to get the role.id
+            await self.session.refresh(role)
 
-            # Link permissions to role
-            role.permissions = list(permissions)
+            # If permission_names are provided, fetch and link permissions
+            if role_data.permission_names:
+                # Get permissions by names using async query
+                permissions_query = select(Permission).where(
+                    or_(*[Permission.name ==
+                        name for name in role_data.permission_names])
+                )
+                result = await self.session.exec(permissions_query)
+                permissions = result.all()
+                # Validate all permissions exist
+                found_names = {p.name for p in permissions}
+                missing_names = set(role_data.permission_names) - found_names
+                if missing_names:
+                    raise InvalidPermissionsError(list(missing_names))
 
-        await self.session.commit()
-        await self.session.refresh(role)
-        return self._to_domain(role)
+                # Create role permission associations
+                role_permissions = [
+                    RolePermission(
+                        role_id=role.id,
+                        permission_id=permission.id
+                    )
+                    for permission in permissions
+                ]
+
+                self.session.add_all(role_permissions)
+                await self.session.commit()
+
+            # Get fresh role data with permissions
+            role_query = select(Role).where(Role.id == role.id).options(
+                selectinload(Role.permissions))  # type: ignore
+            role_result = await self.session.exec(role_query)
+            updated_role = role_result.first()
+
+            if not updated_role:
+                raise RoleNotFoundError(role.id)
+
+            return self._to_domain(updated_role)
+
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            raise RoleCreateError(
+                role_data.name, f"Failed to create role: {str(e)}") from e
+        except Exception as e:
+            await self.session.rollback()
+            raise e from e
 
     async def update_role(self, role_id: int, role_data: RoleUpdate) -> RoleEntity:
-        role = await self.session.get(Role, role_id)
-        if not role:
-            raise RoleNotFoundError(role_id)
+        try:
+            # Get role with permissions loaded
+            get_role_with_permissions_query = select(Role).where(Role.id == role_id).options(
+                selectinload(Role.permissions))  # type: ignore
+            get_role_with_permissions_result = await self.session.exec(get_role_with_permissions_query)
+            role = get_role_with_permissions_result.first()
 
-        if role_data.name is not None:
-            role.name = role_data.name
-        if role_data.description is not None:
-            role.description = role_data.description
-        if role_data.is_active is not None:
-            role.is_active = role_data.is_active
-        if role_data.permission_names is not None:
-            # Get permissions by names
-            permissions_query = select(Permission).where(
-                or_(*[Permission.name == name for name in role_data.permission_names])
-            )
-            result = await self.session.exec(permissions_query)
-            permissions = result.all()
+            if not role:
+                raise RoleNotFoundError(role_id)
 
-            # Update role permissions
-            role.permissions = list(permissions)
+            # Update basic fields
+            if role_data.name is not None:
+                role.name = role_data.name
+            if role_data.description is not None:
+                role.description = role_data.description
+            if role_data.is_active is not None:
+                role.is_active = role_data.is_active
+            if role_data.is_system_role is not None:
+                role.is_system_role = role_data.is_system_role
 
-        await self.session.commit()
-        await self.session.refresh(role)
-        return self._to_domain(role)
+            # Update permissions if provided
+            if role_data.permission_names is not None:
+                # Get permissions by names
+                get_permissions_by_names_query = select(Permission).where(
+                    or_(*[Permission.name ==
+                        name for name in role_data.permission_names])
+                )
+                get_permissions_by_names_result = await self.session.exec(get_permissions_by_names_query)
+                permissions = get_permissions_by_names_result.all()
 
-    async def delete_role(self, role_id: int) -> None:
+                # Validate all permissions exist
+                found_names = {p.name for p in permissions}
+                missing_names = set(role_data.permission_names) - found_names
+                if missing_names:
+                    raise InvalidPermissionsError(list(missing_names))
+
+                # Bugs of sqlmodel, link: https://github.com/fastapi/sqlmodel/issues/909
+                # Delete existing role permissions
+                delete_query = delete(RolePermission).where(
+                    RolePermission.role_id == role_id  # type: ignore
+                )
+                await self.session.exec(delete_query)  # type: ignore
+
+                # Create new role permissions
+                role_permissions = [
+                    RolePermission(
+                        role_id=role.id,
+                        permission_id=permission.id
+                    )
+                    for permission in permissions
+                ]
+                self.session.add_all(role_permissions)
+
+            await self.session.commit()
+            await self.session.refresh(role)
+
+            # Get fresh role data with permissions
+            get_role_by_id_query = select(Role).where(Role.id == role_id).options(
+                selectinload(Role.permissions))  # type: ignore
+            get_role_by_id_result = await self.session.exec(get_role_by_id_query)
+            updated_role = get_role_by_id_result.first()
+
+            if not updated_role:
+                raise RoleNotFoundError(role_id)
+
+            return self._to_domain(updated_role)
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            raise RoleUpdateError(
+                role_data.name or str(role_id), f"Failed to update role: {str(e)}") from e
+        except Exception as e:
+            await self.session.rollback()
+            raise e from e
+
+    async def delete_role(self, role_id: int) -> RoleEntity:
         role = await self.session.get(Role, role_id)
         if not role:
             raise RoleNotFoundError(role_id)
         role.is_active = False
         await self.session.commit()
+        await self.session.refresh(role)
+        return self._to_domain(role)
 
-    async def get_all_users_with_roles(self) -> List[UserEntity]:
-        """Get all users with their system roles and project roles"""
-        result = await self.session.exec(
-            select(User)
-            .options(
-                selectinload(User.system_role),  # type: ignore
-                selectinload(User.user_project_roles)  # type: ignore
-                .selectinload(UserProjectRole.project),  # type: ignore
-                selectinload(User.user_project_roles)  # type: ignore
-                .selectinload(UserProjectRole.role)  # type: ignore
-            )
-        )
-        users = result.all()
-        return [self._user_to_domain(u) for u in users]
-
-    def _user_to_domain(self, user: User) -> UserEntity:
-        """Convert SQLAlchemy User model to domain entity"""
-        project_roles = []
-        for upr in user.user_project_roles:
-            if upr.project and upr.role:
-                project_roles.append({
-                    "project_name": upr.project.name,
-                    "role_name": upr.role.name
-                })
-
-        return UserEntity(
-            id=user.id,
-            email=user.email,
-            name=user.name or "",
-            system_role=user.system_role.name if user.system_role else None,
-            project_roles=project_roles
-        )
-
-    async def get_project_role_assignments(
+    async def get_project_roles_by_project_id(
         self,
         project_id: int,
         page: int = 1,
@@ -303,99 +367,101 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         role_name: Optional[str] = None,
         search: Optional[str] = None
     ) -> Tuple[List[UserProjectRoleEntity], int]:
-        """Get paginated and filtered user role assignments for a project"""
-        query = select(UserProjectRole)\
-            .options(
-                selectinload(UserProjectRole.user),  # type: ignore
-                selectinload(UserProjectRole.role)  # type: ignore
-        )\
-            .where(UserProjectRole.project_id == project_id)
+        try:
+            # Base query
+            base_query = select(UserProjectRole)\
+                .options(
+                    selectinload(UserProjectRole.user),  # type: ignore
+                    selectinload(UserProjectRole.role)  # type: ignore
+            )\
+                .where(UserProjectRole.project_id == project_id)
 
-        # Apply role filter
-        if role_name:
-            query = query.join(Role).where(Role.name == role_name)
+            # Apply role filter
+            if role_name:
+                base_query = base_query.join(
+                    Role).where(Role.name == role_name)
 
-        # Apply search filter
-        if search:
-            search_term = f"%{search}%"
-            query = query.join(User).where(
-                or_(
-                    User.name.ilike(search_term),  # type: ignore
-                    User.email.ilike(search_term)  # type: ignore
+            # Apply search filter
+            if search:
+                search_term = f"%{search}%"
+                base_query = base_query.join(User).where(
+                    or_(
+                        User.name.ilike(search_term),  # type: ignore
+                        User.email.ilike(search_term)  # type: ignore
+                    )
                 )
-            )
 
-        # Get total count
-        count_query = select(func.count()).select_from(query.subquery())
-        total = await self.session.scalar(count_query)
-        if total is None:
-            total = 0
+            # Get total count before pagination
+            count_query = select(func.count()).select_from(
+                base_query.subquery())
+            total = await self.session.scalar(count_query)
 
-        # Apply pagination
-        query = query.offset((page - 1) * page_size).limit(page_size)
+            # Apply pagination
+            base_query = base_query.offset(
+                (page - 1) * page_size).limit(page_size)
 
-        # Execute query
-        result = await self.session.exec(query)
-        assignments = list(result.all())
+            # Execute query
+            result = await self.session.exec(base_query)
+            assignments = result.all()
 
-        # Convert to domain entities
-        domain_assignments = [
-            self._to_domain_user_project_role(a) for a in assignments]
+            # Convert to domain entities
+            domain_assignments = [
+                self._to_domain_user_project_role(a) for a in assignments
+            ]
 
-        return domain_assignments, total
+            return domain_assignments, total or 0
 
-    async def get_project_by_id(self, project_id: int) -> Optional[ProjectEntity]:
-        query = select(Project).where(Project.id == project_id)
-        result = await self.session.exec(query)
-        project = result.first()
-        return self._to_domain_project(project) if project else None
+        except SQLAlchemyError as e:
+            raise RoleError(
+                f"Failed to fetch project roles: {str(e)}") from e
 
-    async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
-        query = select(User).where(User.id == user_id)
-        result = await self.session.exec(query)
-        user = result.first()
-        return self._to_domain_user(user) if user else None
+    async def get_system_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None
+    ) -> Tuple[List[RoleEntity], int]:
+        try:
+            # Base query
+            base_query = select(Role).where(Role.is_system_role)
 
-    def _to_domain_user_project_role(self, upr: UserProjectRole) -> UserProjectRoleEntity:
-        return UserProjectRoleEntity(
-            id=upr.id,
-            user_id=upr.user_id,
-            project_id=upr.project_id,
-            role_id=upr.role_id,
-            user=self._to_domain_user(upr.user) if upr.user else None,
-            role=self._to_domain_role(upr.role) if upr.role else None,
-            project=self._to_domain_project(
-                upr.project) if upr.project else None,
-            created_at=upr.created_at,
-            updated_at=upr.updated_at
-        )
+            # Apply filters
+            if search:
+                base_query = base_query.where(
+                    or_(
+                        Role.name.ilike(f"%{search}%"),  # type: ignore
+                        Role.description.ilike(f"%{search}%")  # type: ignore
+                    )
+                )
 
-    def _to_domain_user(self, user: User) -> UserEntity:
-        return UserEntity(
-            id=user.id,
-            email=user.email,
-            name=user.name,
-            created_at=user.created_at,
-            updated_at=user.updated_at
-        )
+            if is_active is not None:
+                base_query = base_query.where(Role.is_active == is_active)
 
-    def _to_domain_role(self, role: Role) -> RoleEntity:
-        return RoleEntity(
-            id=role.id,
-            name=role.name,
-            description=role.description,
-            is_system_role=role.is_system_role,
-            is_active=role.is_active,
-            created_at=role.created_at,
-            updated_at=role.updated_at
-        )
+            # Get total count before pagination
+            count_query = select(func.count()).select_from(
+                base_query.subquery())
+            total = await self.session.scalar(count_query)
 
-    def _to_domain_project(self, project: Project) -> ProjectEntity:
-        return ProjectEntity(
-            id=project.id,
-            name=project.name,
-            key=project.key,
-            description=project.description,
-            created_at=project.created_at,
-            updated_at=project.updated_at
-        )
+            # Apply sorting
+            if sort_by:
+                direction = desc if sort_order == "desc" else asc
+                base_query = base_query.order_by(
+                    direction(getattr(Role, sort_by)))
+            else:
+                base_query = base_query.order_by(Role.name)
+
+            # Apply pagination
+            base_query = base_query.offset(
+                (page - 1) * page_size).limit(page_size)
+
+            # Execute query
+            result = await self.session.exec(base_query)
+            roles = result.all()
+
+            return [self._to_domain(role) for role in roles], total or 0
+
+        except SQLAlchemyError as e:
+            raise RoleError(f"Failed to fetch system roles: {str(e)}") from e

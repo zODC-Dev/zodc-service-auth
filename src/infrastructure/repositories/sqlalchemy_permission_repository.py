@@ -28,5 +28,6 @@ class SQLAlchemyPermissionRepository(IPermissionRepository):
         return PermissionEntity(
             id=permission.id,
             name=permission.name,
-            description=permission.description
+            description=permission.description,
+            group=permission.group
         )
