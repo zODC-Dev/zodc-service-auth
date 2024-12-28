@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
+
+from .base import BaseModelWithTimestamps
 
 if TYPE_CHECKING:
     from .role import Role
@@ -8,10 +10,9 @@ if TYPE_CHECKING:
 from .role_permission import RolePermission
 
 
-class Permission(SQLModel, table=True):
+class Permission(BaseModelWithTimestamps, table=True):
     __tablename__ = "permissions"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True)
     description: Optional[str] = None
 

@@ -1,17 +1,18 @@
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
+
+from .base import BaseModelWithTimestamps
+from .user_project_role import UserProjectRole
 
 if TYPE_CHECKING:
     from .user import User
 
-from .user_project_role import UserProjectRole
 
-
-class Project(SQLModel, table=True):
+class Project(BaseModelWithTimestamps, table=True):
     __tablename__ = "projects"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(unique=True, index=True)
     key: str = Field(unique=True, index=True)
     description: Optional[str] = None
 
@@ -25,7 +26,7 @@ class Project(SQLModel, table=True):
         }
     )
 
-    user_roles: List["UserProjectRole"] = Relationship(
+    user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="project",
         sa_relationship_kwargs={
             "lazy": "selectin",

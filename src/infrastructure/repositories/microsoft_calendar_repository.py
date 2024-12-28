@@ -54,7 +54,8 @@ class MicrosoftCalendarRepository(ICalendarRepository):
                     return self._parse_response(data)
                 else:
                     log.error(
-                        f"Microsoft Graph API error: {response.status_code} - {response.text}"
+                        f"Microsoft Graph API error: {
+                            response.status_code} - {response.text}"
                     )
                     raise CalendarError("Failed to fetch calendar events")
 
@@ -92,12 +93,15 @@ class MicrosoftCalendarRepository(ICalendarRepository):
 
     def _parse_event(self, event: Dict[str, Any]) -> CalendarEvent:
         online_meeting = event.get("onlineMeeting")
-        online_meeting_url = online_meeting.get("joinUrl") if online_meeting else None
+        online_meeting_url = online_meeting.get(
+            "joinUrl") if online_meeting else None
         return CalendarEvent(
             id=event["id"],
             subject=event["subject"],
-            start_time=datetime.fromisoformat(event["start"]["dateTime"].replace('Z', '')),
-            end_time=datetime.fromisoformat(event["end"]["dateTime"].replace('Z', '')),
+            start_time=datetime.fromisoformat(
+                event["start"]["dateTime"].replace('Z', '')),
+            end_time=datetime.fromisoformat(
+                event["end"]["dateTime"].replace('Z', '')),
             organizer_email=event["organizer"]["emailAddress"]["address"],
             is_online_meeting=event.get("isOnlineMeeting", False),
             online_meeting_url=online_meeting_url,

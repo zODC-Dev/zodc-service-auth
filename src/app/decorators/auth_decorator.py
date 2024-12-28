@@ -22,7 +22,8 @@ def require_permissions(
                 # Get token from Authorization header
                 auth_header = request.headers.get('Authorization')
                 if not auth_header or not auth_header.startswith('Bearer '):
-                    raise HTTPException(status_code=401, detail="Missing or invalid token")
+                    raise HTTPException(
+                        status_code=401, detail="Missing or invalid token")
 
                 # Verify JWT token
                 access_token = auth_header.split(' ')[1]
@@ -50,14 +51,18 @@ def require_permissions(
                     )
                 return await func(request, *args, **kwargs)
             except jwt.ExpiredSignatureError as e:
-                raise HTTPException(status_code=401, detail="Token has expired") from e
+                raise HTTPException(
+                    status_code=401, detail="Token has expired") from e
             except jwt.InvalidTokenError as e:
-                raise HTTPException(status_code=401, detail="Invalid token") from e
+                raise HTTPException(
+                    status_code=401, detail="Invalid token") from e
             except Exception as e:
                 log.error(f"Permission check error: {str(e)}")
-                raise HTTPException(status_code=403, detail="Permission check failed") from e
+                raise HTTPException(
+                    status_code=403, detail="Permission check failed") from e
         return wrapper
     return decorator
+
 
 def _check_permissions(
     payload: Dict[str, Any],
@@ -84,9 +89,9 @@ def _check_permissions(
 
     return True
 
+
 def _check_system_roles(payload: Dict[str, Any], required_roles: List[str]) -> bool:
     user_role = payload.get("system_role")
-    log.info(f"User role: {user_role}")
     return (user_role is not None) and (user_role in required_roles)
 
 
@@ -107,6 +112,7 @@ def _check_project_roles(
         return all(role in user_roles for role in required_roles)
     return any(role in user_roles for role in required_roles)
 
+
 def _check_user_permissions(
     payload: Dict[str, Any],
     required_permissions: List[str],
@@ -116,6 +122,7 @@ def _check_user_permissions(
     if require_all:
         return all(perm in user_permissions for perm in required_permissions)
     return any(perm in user_permissions for perm in required_permissions)
+
 
 def _get_project_id(request: Request) -> Optional[str]:
     """Extract project_id from request"""

@@ -4,11 +4,14 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.app.routers.util_router import router as util_router
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
+from src.app.routers.permission_router import router as permission_router
+from src.app.routers.project_router import router as project_router
+from src.app.routers.role_router import router as role_router
 from src.app.routers.task_router import router as task_router
 from src.app.routers.user_router import router as user_router
+from src.app.routers.util_router import router as util_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
@@ -56,6 +59,14 @@ app.include_router(calendar_router, prefix=settings.API_V1_STR +
                    "/calendars", tags=["calendars"])
 app.include_router(util_router, prefix=settings.API_V1_STR +
                    "/utils", tags=["utils"])
+app.include_router(user_router, prefix=settings.API_V1_STR +
+                   "/users", tags=["users"])
+app.include_router(role_router, prefix=settings.API_V1_STR +
+                   "/roles", tags=["roles"])
+app.include_router(permission_router, prefix=settings.API_V1_STR +
+                   "/permissions", tags=["permissions"])
+app.include_router(project_router, prefix=settings.API_V1_STR +
+                   "/projects", tags=["projects"])
 
 if __name__ == "__main__":
     import uvicorn

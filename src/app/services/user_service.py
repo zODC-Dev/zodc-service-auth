@@ -1,7 +1,6 @@
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
-from src.configs.logger import log
 from src.domain.entities.user import User
 from src.domain.exceptions.user_exceptions import (
     UserInactiveError,
@@ -17,7 +16,6 @@ class UserService:
         self.redis_service = redis_service
         self.cache_ttl = timedelta(minutes=5)
 
-
     async def get_current_user(self, user_id: int) -> User:
         """Get current user information"""
         cache_key = f"user:{user_id}"
@@ -29,7 +27,6 @@ class UserService:
 
         # Get from database
         user = await self.user_repository.get_user_by_id(user_id)
-        log.info(f"user: {user}")
         if not user:
             raise UserNotFoundError(f"User with id {user_id} not found")
         if not user.is_active:

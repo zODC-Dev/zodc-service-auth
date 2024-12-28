@@ -1,9 +1,14 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from .base import BaseModel
+
+if TYPE_CHECKING:
+    pass
 
 
-class RolePermission(SQLModel, table=True):
+class RolePermission(BaseModel, table=True):
     __tablename__ = "role_permissions"
 
     role_id: Optional[int] = Field(
