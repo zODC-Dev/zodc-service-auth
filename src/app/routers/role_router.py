@@ -11,13 +11,22 @@ from src.app.schemas.requests.role import (
     RoleCreateRequest,
     RoleUpdateRequest,
 )
-from src.app.schemas.responses.role import PaginatedUserRoleAssignmentResponse, RoleResponse
+from src.app.schemas.responses.role import (
+    PaginatedGetProjectRolesResponse,
+    PaginatedGetSystemRolesResponse,
+    RoleResponse,
+)
+from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
 
-@router.post("/", response_model=RoleResponse)
-@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
+@router.post("/", response_model=RoleResponse,
+             responses={
+                 400: {"description": "Role already exists or invalid data"},
+                 500: {"description": "Internal server error"}
+             })
+@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def create_role(
     request: Request,
     role_data: RoleCreateRequest,
@@ -36,8 +45,49 @@ async def create_role(
     return await controller.create_role(role_data)
 
 
+@router.get("/system", response_model=PaginatedGetSystemRolesResponse,
+            responses={
+                500: {"description": "Internal server error"}
+            })
+@require_permissions(system_roles=[SystemRoles.ADMIN])
+async def get_system_roles(
+    request: Request,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    search: Optional[str] = None,
+    sort_by: Optional[str] = Query(
+        None, regex="^(name|description|created_at|updated_at)$"),
+    sort_order: Optional[str] = Query(None, regex="^(asc|desc)$"),
+    is_active: Optional[bool] = None,
+    controller: RoleController = Depends(get_role_controller)
+):
+    """Get paginated system roles with filtering and sorting.
+
+    Args:
+        request: FastAPI request object
+        page: Page number
+        page_size: Number of items per page
+        search: Search term for name and description
+        sort_by: Field to sort by
+        sort_order: Sort direction (asc/desc)
+        is_active: Filter by active status
+        controller: Role controller instance
+
+    Returns:
+        Paginated list of system roles
+    """
+    return await controller.get_system_roles(
+        page=page,
+        page_size=page_size,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        is_active=is_active
+    )
+
+
 @router.get("/", response_model=List[RoleResponse])
-# @require_permissions(system_roles=["user"])
+@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def get_roles(
     request: Request,
     include_deleted: bool = False,
@@ -56,8 +106,12 @@ async def get_roles(
     return await controller.get_roles(include_deleted)
 
 
-@router.post("/system")
-@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
+@router.post("/system",
+             responses={
+                 400: {"description": "User or role not found"},
+                 500: {"description": "Internal server error"}
+             })
+@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def assign_system_role(
     request: Request,
     role_data: AssignSystemRoleRequest,
@@ -74,8 +128,12 @@ async def assign_system_role(
     return {"message": "Role assigned successfully"}
 
 
-@router.put("/{role_id}", response_model=RoleResponse)
-@require_permissions(system_roles=["admin"], permissions=["system.roles.manage"])
+@router.put("/{role_id}", response_model=RoleResponse,
+            responses={
+                400: {"description": "Role not found"},
+                500: {"description": "Internal server error"}
+            })
+@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def update_role(
     request: Request,
     role_id: int,
@@ -96,12 +154,31 @@ async def update_role(
     return await controller.update_role(role_id, role_data)
 
 
-@router.get("/projects/{project_id}", response_model=PaginatedUserRoleAssignmentResponse)
-# @require_permissions(project_roles=["project_owner"])
+@router.delete("/{role_id}", response_model=RoleResponse,
+               responses={
+                   400: {"description": "Role not found"},
+                   500: {"description": "Internal server error"}
+               })
+@require_permissions(system_roles=[SystemRoles.ADMIN])
+async def delete_role(
+    request: Request,
+    role_id: int,
+    controller: RoleController = Depends(get_role_controller)
+):
+    """Delete an existing role by marking it as inactive"""
+    return await controller.delete_role(role_id)
+
+
+@router.get("/projects/{project_id}", response_model=PaginatedGetProjectRolesResponse,
+            responses={
+                404: {"description": "Project not found"},
+                500: {"description": "Internal server error"}
+            })
+@require_permissions(system_roles=[SystemRoles.PRODUCT_OWNER, SystemRoles.ADMIN])
 async def get_project_roles(
     request: Request,
     project_id: int,
-    page: int = Query(1, ge=1, description="Page number (starts from 1)"),
+    page: int = Query(1, ge=1),
     page_size: int = Query(
         10, ge=1, le=100, description="Number of items per page"),
     role_name: Optional[str] = Query(None, description="Filter by role name"),
@@ -123,7 +200,7 @@ async def get_project_roles(
     Returns:
         Paginated list of user role assignments
     """
-    return await controller.get_project_role_assignments(
+    return await controller.get_project_roles_by_project_id(
         project_id=project_id,
         page=page,
         page_size=page_size,
@@ -132,21 +209,25 @@ async def get_project_roles(
     )
 
 
-@router.post("/projects/{project_id}")
-@require_permissions(project_roles=["project_owner"])
-async def assign_project_roles(
+@router.post("/projects/{project_id}",
+             responses={
+                 400: {"description": "Project not found or invalid role assignments or user not found"},
+                 500: {"description": "Internal server error"}
+             })
+@require_permissions(system_roles=[SystemRoles.PRODUCT_OWNER])
+async def assign_project_role(
     request: Request,
     project_id: int,
-    assignments: List[AssignProjectRoleRequest],
+    assignment: AssignProjectRoleRequest,
     controller: RoleController = Depends(get_role_controller)
 ):
-    """Assign or update roles for multiple users in a project.
+    """Assign or update role for a user in a project.
 
     Args:
         request: FastAPI request object
         project_id: ID of the project
-        assignments: List of role assignments
+        assignment: Role assignment
         controller: Role controller instance
     """
-    await controller.assign_project_roles(project_id, assignments)
-    return {"message": "Roles assigned successfully"}
+    await controller.assign_project_role(project_id, assignment)
+    return {"message": "Role assigned successfully"}

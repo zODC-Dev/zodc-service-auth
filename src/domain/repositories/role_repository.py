@@ -2,9 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple
 
 from src.domain.entities.permission import Permission
-from src.domain.entities.project import Project
 from src.domain.entities.role import Role, RoleCreate, RoleUpdate
-from src.domain.entities.user import User
 from src.domain.entities.user_project_role import UserProjectRole
 
 
@@ -55,7 +53,7 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_role(self, role_id: int) -> None:
+    async def delete_role(self, role_id: int) -> Role:
         pass
 
     @abstractmethod
@@ -63,12 +61,7 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all_users_with_roles(self) -> List[User]:
-        """Get all users with their system roles"""
-        pass
-
-    @abstractmethod
-    async def get_project_role_assignments(
+    async def get_project_roles_by_project_id(
         self,
         project_id: int,
         page: int = 1,
@@ -77,14 +70,17 @@ class IRoleRepository(ABC):
         search: Optional[str] = None
     ) -> Tuple[List[UserProjectRole], int]:
         """Get paginated and filtered user role assignments for a project"""
-        raise NotImplementedError
-
-    @abstractmethod
-    async def get_project_by_id(self, project_id: int) -> Optional[Project]:
-        """Get project by ID"""
         pass
 
     @abstractmethod
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """Get user by ID"""
+    async def get_system_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None
+    ) -> Tuple[List[Role], int]:
+        """Get paginated and filtered system roles"""
         pass

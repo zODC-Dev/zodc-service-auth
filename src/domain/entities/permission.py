@@ -8,6 +8,8 @@ from .base import BaseEntity
 class Permission(BaseEntity):
     name: str
     description: Optional[str] = None
+    group: Optional[str] = None
+
 
 class PermissionCreate(BaseModel):
     name: str

@@ -2,7 +2,7 @@ from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.constants.roles import Roles
+from src.domain.constants.roles import SystemRoles
 from src.domain.entities.auth import MicrosoftIdentity, UserCredentials
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.user_exceptions import UserCreationError
@@ -34,9 +34,9 @@ class SQLAlchemyAuthRepository(IAuthRepository):
 
     async def create_sso_user(self, microsoft_identity: MicrosoftIdentity) -> UserEntity:
         new_user = UserModel(
-            email = microsoft_identity.email,
-            name = microsoft_identity.name or microsoft_identity.email,
-            is_active = True
+            email=microsoft_identity.email,
+            name=microsoft_identity.name or microsoft_identity.email,
+            is_active=True
         )
         self.session.add(new_user)
         await self.session.commit()
@@ -46,7 +46,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
             raise UserCreationError("Something went wrong")
 
         # Assign default role
-        await self.role_repository.assign_system_role_to_user(new_user.id, Roles.USER)
+        await self.role_repository.assign_system_role_to_user(new_user.id, SystemRoles.USER)
 
         return self._to_domain(new_user)
 

@@ -32,6 +32,11 @@ class Role(BaseModelWithTimestamps, table=True):
         sa_relationship_kwargs={"lazy": "selectin"}
     )
 
+    role_permissions: List["RolePermission"] = Relationship(
+        back_populates="role",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
     # Direct relationship with UserProjectRole entries
     user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="role",

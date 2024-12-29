@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from src.app.schemas.responses.common import PaginatedResponse
 from src.domain.entities.role import Role
+from src.domain.entities.user_project_role import UserProjectRole
 
 
 class RoleResponse(BaseModel):
@@ -31,15 +32,46 @@ class RoleResponse(BaseModel):
         )
 
 
-class UserRoleAssignmentResponse(BaseModel):
+class GetProjectRoleResponse(BaseModel):
     user_id: int
     user_name: str
     user_email: str
     role_name: Optional[str] = None
 
+    @classmethod
+    def from_domain(cls, assignment: UserProjectRole) -> 'GetProjectRoleResponse':
+        return cls(
+            user_id=assignment.user.id if assignment.user else None,
+            user_name=assignment.user.name if assignment.user else None,
+            user_email=assignment.user.email if assignment.user else None,
+            role_name=assignment.role.name if assignment.role else None
+        )
+
     class Config:
         from_attributes = True
 
 
-class PaginatedUserRoleAssignmentResponse(PaginatedResponse[UserRoleAssignmentResponse]):
+class PaginatedGetProjectRolesResponse(PaginatedResponse[GetProjectRoleResponse]):
+    pass
+
+
+class GetSystemRoleResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    permissions: List[str]
+    is_active: bool
+
+    @classmethod
+    def from_domain(cls, role: Role) -> 'GetSystemRoleResponse':
+        return cls(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            permissions=[p.name for p in role.permissions],
+            is_active=role.is_active
+        )
+
+
+class PaginatedGetSystemRolesResponse(PaginatedResponse[GetSystemRoleResponse]):
     pass
