@@ -15,3 +15,13 @@ class UtilController:
             # raise XXX from e to avoid Ruff check error
             raise HTTPException(
                 500, detail=f"Error processing file: {e}") from e
+
+    async def upload_excel_to_blob(self, file: UploadFile) -> str:
+        try:
+            blob_url = await self.util_service.upload_excel_to_blob(file)
+            return blob_url
+        except Exception as e:
+            raise HTTPException(
+                500,
+                detail=f"Failed to upload file: {str(e)}"
+            ) from e
