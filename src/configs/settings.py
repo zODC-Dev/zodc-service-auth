@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_STORAGE_ACCOUNT: str = ""
 
+    # NATS settings
+    NATS_URL: str = "nats://localhost:4222"
+    NATS_CLIENT_NAME: str = "auth_service"
+    NATS_CLUSTER_ID: str = "test-cluster"
+    NATS_USERNAME: str = "myuser"
+    NATS_PASSWORD: str = "mypassword"
+
     class Config:
         """Configuration settings."""
 
