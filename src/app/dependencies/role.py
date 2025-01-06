@@ -7,7 +7,8 @@ from src.configs.database import get_db
 from src.infrastructure.repositories.sqlalchemy_permission_repository import SQLAlchemyPermissionRepository
 from src.infrastructure.repositories.sqlalchemy_project_repository import SQLAlchemyProjectRepository
 from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
-from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
+
+from .common import get_user_repository
 
 
 async def get_role_repository(db: AsyncSession = Depends(get_db)):
@@ -23,11 +24,6 @@ async def get_permission_repository(db: AsyncSession = Depends(get_db)):
 async def get_project_repository(db: AsyncSession = Depends(get_db)):
     """Get dependencies for project_repository"""
     return SQLAlchemyProjectRepository(db)
-
-
-async def get_user_repository(db: AsyncSession = Depends(get_db)):
-    """Get dependencies for user_repository"""
-    return SQLAlchemyUserRepository(db)
 
 
 async def get_role_service(

@@ -10,6 +10,7 @@ from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlRespons
 
 router = APIRouter()
 
+
 @router.post("/login", response_model=LoginSuccessResponse)
 async def login_by_email_password(
     request: LoginEmailPasswordRequest,
@@ -17,6 +18,7 @@ async def login_by_email_password(
 ):
     """Handle login by using email password"""
     return await controller.login(request)
+
 
 @router.post("/microsoft", response_model=LoginUrlResponse)
 async def login_by_sso(
@@ -26,6 +28,7 @@ async def login_by_sso(
     """Handle login by SSO request, return login url"""
     return await controller.login_by_sso(request)
 
+
 @router.post("/microsoft/callback", response_model=LoginSuccessResponse)
 async def sso_callback(
     request: LoginSSOCallbackRequest,
@@ -33,6 +36,7 @@ async def sso_callback(
 ):
     """Handle microsoft SSO callback, and return application access_token"""
     return await controller.handle_sso_callback(request)
+
 
 @router.post("/token", response_model=LoginSuccessResponse)
 async def login(

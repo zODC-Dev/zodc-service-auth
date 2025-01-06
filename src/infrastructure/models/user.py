@@ -46,14 +46,14 @@ class User(BaseModelWithTimestamps, table=True):
         link_model=UserProjectRole,
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "project_roles,user"
+            "overlaps": "project,user,user_project_roles"
         }
     )
     user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "projects"
+            "overlaps": "projects,users"
         }
     )
 

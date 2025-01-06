@@ -1,7 +1,6 @@
 from azure.storage.blob.aio import BlobServiceClient
 from fastapi import UploadFile
 
-from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.services.blob_storage_service import IBlobStorageService
 
@@ -16,11 +15,6 @@ class AzureBlobStorageService(IBlobStorageService):
         async with BlobServiceClient.from_connection_string(self.connection_string) as blob_service_client:
             container_client = blob_service_client.get_container_client(
                 container_name)
-
-            log.info(f"Uploading file to Azure Blob Storage: {file.filename}")
-            log.info(f"Container name: {container_name}")
-            log.info(f"Connection string: {self.connection_string}")
-            log.info(f"Account URL: {self.account_url}")
 
             # Create blob client
             blob_client = container_client.get_blob_client(file.filename)

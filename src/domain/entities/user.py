@@ -18,7 +18,7 @@ class User(BaseEntity):
     microsoft_id: Optional[str] = None
     microsoft_token: Optional[str] = None
     microsoft_refresh_token: Optional[str] = None
-    user_project_roles: List["UserProjectRole"] = []
+    user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
     system_role: Optional["Role"] = None
 

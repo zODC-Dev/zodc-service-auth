@@ -28,7 +28,8 @@ class AuthController:
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail="Authentication failed") from e
+            raise HTTPException(
+                status_code=500, detail="Authentication failed") from e
 
     async def login_by_sso(
         self,

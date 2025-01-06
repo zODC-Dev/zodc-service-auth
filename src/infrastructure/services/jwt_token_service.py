@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import jwt
 from sqlmodel import select
@@ -8,19 +8,20 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.auth import AuthToken
-from src.domain.entities.role import Role as RoleEntity
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenError, TokenExpiredError
+from src.domain.repositories.role_repository import IRoleRepository
+from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.redis_service import IRedisService
 from src.domain.services.token_service import ITokenService
 from src.infrastructure.models.user import User as UserModel
-from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
-from src.infrastructure.services.redis_service import RedisService
 
 
 class JWTTokenService(ITokenService):
-    def __init__(self, redis_service: RedisService, role_repository: SQLAlchemyRoleRepository):
+    def __init__(self, redis_service: IRedisService, role_repository: IRoleRepository, user_repository: IUserRepository):
         self.redis_service = redis_service
         self.role_repository = role_repository
+        self.user_repository = user_repository
 
     async def create_app_token(self, user: UserEntity) -> AuthToken:
         """Create new JWT token"""
@@ -32,29 +33,10 @@ class JWTTokenService(ITokenService):
             if user.id is None:
                 raise TokenError("User not exist")
 
-            # Get user's system role and permissions
-            system_role = await self.role_repository.get_user_system_role(user.id)
-            system_permissions = []
-            if system_role and system_role.id is not None:
-                system_permissions = await self.role_repository.get_role_permissions(system_role.id)
-
-            # Get user's project roles
-            # project_roles = await self.role_repository.get_user_project_roles(user.id)
-
-            claims: Dict[str, Any] = {
+            claims = {
                 "sub": str(user.id),
                 "email": user.email,
-                "system_role": system_role.name if system_role else None,
-                "system_permissions": [p.name for p in system_permissions],
-                "project_roles": {
-                    # str(role.project_id): {
-                    #     "role": role.name,
-                    #     "permissions": [
-                    #         p.name for p in await self.role_repository.get_role_permissions(role.id)
-                    #     ]
-                    # }
-                    # for role in project_roles
-                },
+                "name": user.name,
                 "exp": expires_at
             }
 
@@ -81,28 +63,26 @@ class JWTTokenService(ITokenService):
                 algorithms=[settings.JWT_ALGORITHM]
             )
 
-            # Convert system_role string to Role entity
-            system_role_name = payload.get("system_role")
-            system_role = None
-            if system_role_name:
-                system_role = RoleEntity(
-                    id=None,  # We don't need the ID for authorization
-                    name=system_role_name,
-                    description=None
-                )
+            # From payload, get user_id, email, name
+            user_id = payload.get("sub")
 
-            return UserEntity(
-                id=int(payload["sub"]),
-                email=payload["email"],
-                name=payload.get("name", ""),
-                system_role=system_role,
-                is_active=True,
-                created_at=datetime.now()
-            )
+            if not user_id:
+                raise InvalidTokenError("Invalid token")
+
+            # Use user_id to get user from database
+            user = await self.user_repository.get_user_by_id_with_role_permissions(user_id)
+
+            if not user:
+                raise InvalidTokenError("User not found")
+
+            return user
         except jwt.ExpiredSignatureError as e:
             raise TokenExpiredError() from e
         except jwt.InvalidTokenError as e:
             raise InvalidTokenError() from e
+        except Exception as e:
+            log.error(f"Error verifying token: {str(e)}")
+            raise TokenError("Failed to verify token") from e
 
     async def get_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
         """Get Microsoft access token for user"""
