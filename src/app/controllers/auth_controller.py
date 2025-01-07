@@ -1,10 +1,15 @@
 from fastapi import HTTPException
 
-from src.app.schemas.requests.auth import LoginEmailPasswordRequest, LoginSSOCallbackRequest, LoginSSORequest
+from src.app.schemas.requests.auth import (
+    LoginEmailPasswordRequest,
+    LoginSSOCallbackRequest,
+    LoginSSORequest,
+    RefreshTokenRequest,
+)
 from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlResponse
 from src.app.services.auth_service import AuthService
 from src.domain.entities.auth import SSOCredentials, UserCredentials
-from src.domain.exceptions.auth_exceptions import AuthenticationError
+from src.domain.exceptions.auth_exceptions import AuthenticationError, TokenError
 
 
 class AuthController:
@@ -20,15 +25,18 @@ class AuthController:
                 email=request.email,
                 password=request.password
             )
-            token = await self.auth_service.login(credentials)
+            token_pair = await self.auth_service.login(credentials)
             return LoginSuccessResponse(
-                access_token=token.access_token,
-                token_type=token.token_type
+                access_token=token_pair.access_token,
+                refresh_token=token_pair.refresh_token,
+                token_type=token_pair.token_type,
+                expires_in=token_pair.expires_in
             )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail="Authentication failed") from e
+            raise HTTPException(
+                status_code=500, detail="Authentication failed") from e
 
     async def login_by_sso(
         self,
@@ -55,10 +63,12 @@ class AuthController:
                 state=request.state,
                 code_verifier=request.code_verifier
             )
-            token = await self.auth_service.handle_sso_callback(sso_credentials)
+            token_pair = await self.auth_service.handle_sso_callback(sso_credentials)
             return LoginSuccessResponse(
-                access_token=token.access_token,
-                token_type=token.token_type
+                access_token=token_pair.access_token,
+                refresh_token=token_pair.refresh_token,
+                token_type=token_pair.token_type,
+                expires_in=token_pair.expires_in
             )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
@@ -67,3 +77,15 @@ class AuthController:
                 status_code=500,
                 detail="SSO authentication failed"
             ) from e
+
+    async def refresh_tokens(self, request: RefreshTokenRequest) -> LoginSuccessResponse:
+        try:
+            token_pair = await self.auth_service.refresh_tokens(request.refresh_token)
+            return LoginSuccessResponse(
+                access_token=token_pair.access_token,
+                refresh_token=token_pair.refresh_token,
+                token_type=token_pair.token_type,
+                expires_in=token_pair.expires_in
+            )
+        except TokenError as e:
+            raise HTTPException(status_code=401, detail=str(e)) from e

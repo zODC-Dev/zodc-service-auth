@@ -15,6 +15,7 @@ from src.app.routers.util_router import router as util_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
+from src.infrastructure.services.nats_service import NATSService
 
 
 @asynccontextmanager
@@ -24,10 +25,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info(f"Starting up {settings.APP_NAME}")
     await init_db()
 
+    # Initialize NATS service
+    nats_service = NATSService()
+    await nats_service.connect()
+    app.state.nats = nats_service
+
     yield  # This is where the FastAPI app runs
 
     # Shutdown
     log.info(f"Shutting down {settings.APP_NAME}")
+    if hasattr(app.state, "nats"):
+        await app.state.nats.disconnect()
 
 
 app = FastAPI(
@@ -67,6 +75,7 @@ app.include_router(permission_router, prefix=settings.API_V1_STR +
                    "/permissions", tags=["permissions"])
 app.include_router(project_router, prefix=settings.API_V1_STR +
                    "/projects", tags=["projects"])
+
 
 if __name__ == "__main__":
     import uvicorn

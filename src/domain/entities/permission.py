@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -14,3 +14,20 @@ class Permission(BaseEntity):
 class PermissionCreate(BaseModel):
     name: str
     description: Optional[str] = None
+
+
+class PermissionVerificationPayload(BaseModel):
+    token: str
+    user_id: int
+    permissions: List[str]
+    project_id: Optional[int] = None
+    scope: str = "system"  # "system" or "project"
+
+
+class PermissionVerificationResult(BaseModel):
+    allowed: bool
+    user_id: int
+    permissions: List[str]
+    scope: str
+    project_id: Optional[int] = None
+    error: Optional[str] = None

@@ -21,10 +21,12 @@ class Permission(BaseModelWithTimestamps, table=True):
     roles: List["Role"] = Relationship(
         back_populates="permissions",
         link_model=RolePermission,
-        sa_relationship_kwargs={"lazy": "selectin"}
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "permission,role,role_permissions"}
     )
 
     role_permissions: List["RolePermission"] = Relationship(
         back_populates="permission",
-        sa_relationship_kwargs={"lazy": "selectin"}
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "permissions,roles"}
     )

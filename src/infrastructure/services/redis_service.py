@@ -1,16 +1,18 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from redis.asyncio import Redis
 
+from src.domain.services.redis_service import IRedisService
 
-class RedisService:
+
+class RedisService(IRedisService):
     """Service for managing Redis operations."""
 
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Any:
+    async def get(self, key: str) -> Optional[Any]:
         """Get a value from Redis by key."""
         value = await self.redis.get(key)
         if value:

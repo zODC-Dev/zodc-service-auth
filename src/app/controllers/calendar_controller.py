@@ -29,9 +29,10 @@ class CalendarController:
                 page_size=page_size,
                 next_link=next_link
             )
-            return CalendarEventsResponse(events=events_list.events, next_link=events_list.next_link)
+            return CalendarEventsResponse.from_domain(events_list)
         except CalendarError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
         except Exception as e:
             log.error(f"Calendar controller error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error") from e
+            raise HTTPException(
+                status_code=500, detail="Internal server error") from e

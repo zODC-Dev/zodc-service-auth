@@ -26,7 +26,8 @@ class RoleResponse(BaseModel):
             description=role.description,
             is_system_role=role.is_system_role,
             is_active=role.is_active,
-            permission_names=[p.name for p in role.permissions],
+            permission_names=[
+                p.name for p in role.permissions] if role.permissions else [],
             created_at=role.created_at,
             updated_at=role.updated_at
         )
@@ -68,7 +69,8 @@ class GetSystemRoleResponse(BaseModel):
             id=role.id,
             name=role.name,
             description=role.description,
-            permissions=[p.name for p in role.permissions],
+            permissions=[
+                p.name for p in role.permissions] if role.permissions else [],
             is_active=role.is_active
         )
 

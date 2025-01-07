@@ -1,14 +1,21 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.entities.auth import AuthToken
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.domain.entities.auth import TokenPair
 from src.domain.entities.user import User
 
 
 class ITokenService(ABC):
     @abstractmethod
-    async def create_app_token(self, user: User) -> AuthToken:
-        """Create new access token"""
+    async def create_token_pair(self, user: User) -> TokenPair:
+        """Create new access and refresh token pair"""
+        pass
+
+    @abstractmethod
+    async def refresh_tokens(self, refresh_token: str) -> TokenPair:
+        """Refresh access token using refresh token"""
         pass
 
     @abstractmethod
@@ -17,6 +24,6 @@ class ITokenService(ABC):
         pass
 
     @abstractmethod
-    async def store_app_refresh_token(self, user_id: int, refresh_token: str) -> None:
-        """Store refresh token"""
+    async def get_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
+        """Get Microsoft token for user"""
         pass

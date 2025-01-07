@@ -8,13 +8,13 @@ from src.configs.logger import log
 from src.domain.entities.calendar import CalendarEvent, CalendarEventsList
 from src.domain.exceptions.calendar_exceptions import CalendarError
 from src.domain.repositories.calendar_repository import ICalendarRepository
-from src.infrastructure.services.jwt_token_service import JWTTokenService
+from src.domain.services.token_service import ITokenService
 
 
 class MicrosoftCalendarRepository(ICalendarRepository):
     BASE_URL = "https://graph.microsoft.com/v1.0"
 
-    def __init__(self, token_service: JWTTokenService, db_session: AsyncSession):
+    def __init__(self, token_service: ITokenService, db_session: AsyncSession):
         self.token_service = token_service
         self.db_session = db_session
 

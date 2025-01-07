@@ -37,7 +37,8 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0  # Default Redis database
 
     # FastAPI Azure Auth settings
-    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = ["http://localhost:8000", "http://localhost:4200"]
+    BACKEND_CORS_ORIGINS: list[str | AnyHttpUrl] = [
+        "http://localhost:8000", "http://localhost:4200"]
     OPENAPI_CLIENT_ID: str = ""
     APP_CLIENT_ID: str = ""
 
@@ -46,6 +47,20 @@ class Settings(BaseSettings):
     CLIENT_AZURE_TENANT_ID: str = ""
     CLIENT_AZURE_REDIRECT_URI: str = ""
     CLIENT_AZURE_CLIENT_SECRET: str = ""
+
+    # Azure Blob Storage settings
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_STORAGE_ACCOUNT: str = ""
+
+    # NATS settings
+    NATS_URL: str = "nats://localhost:4222"
+    NATS_CLIENT_NAME: str = "auth_service"
+    NATS_CLUSTER_ID: str = "test-cluster"
+    NATS_USERNAME: str = "myuser"
+    NATS_PASSWORD: str = "mypassword"
+
+    # Refresh token settings
+    REFRESH_TOKEN_EXPIRATION_TIME: int = 60 * 60 * 24 * 30  # 30 days
 
     class Config:
         """Configuration settings."""

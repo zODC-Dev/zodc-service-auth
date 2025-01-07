@@ -1,5 +1,6 @@
 from typing import Optional
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -17,6 +18,16 @@ class SQLAlchemyUserRepository(IUserRepository):
         result = await self.session.exec(
             select(UserModel).where(UserModel.id == user_id)
         )
+        user = result.first()
+        return self._to_domain(user) if user else None
+
+    async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[UserEntity]:
+        stmt = (
+            select(UserModel)
+            .options(selectinload(UserModel.system_role))  # type: ignore
+            .where(UserModel.id == int(user_id))
+        )
+        result = await self.session.exec(stmt)
         user = result.first()
         return self._to_domain(user) if user else None
 
@@ -49,4 +60,5 @@ class SQLAlchemyUserRepository(IUserRepository):
             microsoft_id=db_user.microsoft_id,
             microsoft_refresh_token=db_user.microsoft_refresh_token,
             microsoft_token=db_user.microsoft_token,
+            system_role=db_user.system_role
         )

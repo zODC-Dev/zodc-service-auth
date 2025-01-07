@@ -1,9 +1,10 @@
-from src.domain.entities.auth import AuthToken, SSOCredentials, UserCredentials
+from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
 from src.domain.exceptions.auth_exceptions import (
     InvalidCredentialsError,
 )
 from src.domain.exceptions.user_exceptions import UserCreationError
 from src.domain.repositories.auth_repository import IAuthRepository
+from src.domain.repositories.refresh_token_repository import IRefreshTokenRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.sso_service import ISSOService
@@ -17,15 +18,17 @@ class AuthService:
         user_repository: IUserRepository,
         token_service: ITokenService,
         sso_service: ISSOService,
-        redis_service: IRedisService
+        redis_service: IRedisService,
+        refresh_token_repository: IRefreshTokenRepository
     ):
         self.auth_repository = auth_repository
         self.token_service = token_service
         self.sso_service = sso_service
         self.user_repository = user_repository
         self.redis_service = redis_service
+        self.refresh_token_repository = refresh_token_repository
 
-    async def login(self, credentials: UserCredentials) -> AuthToken:
+    async def login(self, credentials: UserCredentials) -> TokenPair:
         """Handle email/password login"""
         user = await self.auth_repository.verify_credentials(credentials)
         if not user:
@@ -34,13 +37,13 @@ class AuthService:
         if not user.is_active:
             raise InvalidCredentialsError("User is inactive")
 
-        return await self.token_service.create_app_token(user)
+        return await self.token_service.create_token_pair(user)
 
     async def login_by_sso(self, code_challenge: str) -> str:
         """Initialize SSO login flow"""
         return await self.sso_service.generate_auth_url(code_challenge)
 
-    async def handle_sso_callback(self, sso_credentials: SSOCredentials) -> AuthToken:
+    async def handle_sso_callback(self, sso_credentials: SSOCredentials) -> TokenPair:
         """Handle SSO callback"""
         # Get user info from SSO provider
         microsoft_info = await self.sso_service.exchange_code(
@@ -64,13 +67,10 @@ class AuthService:
         )
 
         # Create access token
-        auth_token = await self.token_service.create_app_token(user)
+        token_pair = await self.token_service.create_token_pair(user)
 
-        # Store refresh token if provided
-        if auth_token.refresh_token:
-            await self.token_service.store_app_refresh_token(
-                user.id,
-                auth_token.refresh_token
-            )
+        return token_pair
 
-        return auth_token
+    async def refresh_tokens(self, refresh_token: str) -> TokenPair:
+        """Handle token refresh"""
+        return await self.token_service.refresh_tokens(refresh_token)

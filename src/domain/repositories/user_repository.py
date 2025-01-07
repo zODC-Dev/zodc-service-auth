@@ -14,3 +14,8 @@ class IUserRepository(ABC):
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
         pass
+
+    @abstractmethod
+    async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[User]:
+        """Get user by ID with role permissions"""
+        pass
