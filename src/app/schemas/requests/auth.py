@@ -25,3 +25,7 @@ class TokenVerificationRequest(BaseModel):
     required_system_roles: Optional[List[str]] = None
     required_project_roles: Optional[List[str]] = None
     require_all_roles: bool = False
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

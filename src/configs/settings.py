@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     NATS_USERNAME: str = "myuser"
     NATS_PASSWORD: str = "mypassword"
 
+    # Refresh token settings
+    REFRESH_TOKEN_EXPIRATION_TIME: int = 60 * 60 * 24 * 30  # 30 days
+
     class Config:
         """Configuration settings."""
 

@@ -22,8 +22,6 @@ class SQLAlchemyUserRepository(IUserRepository):
         return self._to_domain(user) if user else None
 
     async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[UserEntity]:
-        log.info(f"Getting user by ID with role permissions: {user_id}")
-
         stmt = (
             select(UserModel)
             .options(selectinload(UserModel.system_role))  # type: ignore

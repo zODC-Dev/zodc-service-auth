@@ -5,7 +5,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.auth import get_auth_controller
-from src.app.schemas.requests.auth import LoginEmailPasswordRequest, LoginSSOCallbackRequest, LoginSSORequest
+from src.app.schemas.requests.auth import (
+    LoginEmailPasswordRequest,
+    LoginSSOCallbackRequest,
+    LoginSSORequest,
+    RefreshTokenRequest,
+)
 from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlResponse
 
 router = APIRouter()
@@ -49,3 +54,12 @@ async def login(
         password=form_data.password
     )
     return await controller.login(request)
+
+
+@router.post("/refresh", response_model=LoginSuccessResponse)
+async def refresh_tokens(
+    request: RefreshTokenRequest,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Refresh access token using refresh token"""
+    return await controller.refresh_tokens(request)

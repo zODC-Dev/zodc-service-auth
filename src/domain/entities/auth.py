@@ -29,3 +29,18 @@ class SSOCredentials(BaseModel):
     code: str
     state: str
     code_verifier: str
+
+
+class RefreshTokenEntity(BaseModel):
+    token: str
+    user_id: int
+    expires_at: datetime
+    is_revoked: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class TokenPair(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int

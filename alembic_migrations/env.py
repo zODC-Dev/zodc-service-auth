@@ -17,6 +17,7 @@ from src.infrastructure.models.permission import Permission
 from src.infrastructure.models.role_permission import RolePermission
 from src.infrastructure.models.project import Project
 from src.infrastructure.models.user_project_role import UserProjectRole
+from src.infrastructure.models.refresh_token import RefreshToken
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -65,11 +66,13 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def do_run_migrations(connection):
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_async_migrations():
     """In this scenario we need to create an Engine
@@ -85,6 +88,7 @@ async def run_async_migrations():
         await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()
+
 
 def run_migrations_online() -> None:
     # """Run migrations in 'online' mode.

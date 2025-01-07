@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import secrets
 from typing import Optional
 
 import jwt
@@ -7,9 +8,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
 from src.configs.settings import settings
-from src.domain.entities.auth import AuthToken
+from src.domain.entities.auth import RefreshTokenEntity, TokenPair
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenError, TokenExpiredError
+from src.domain.repositories.refresh_token_repository import IRefreshTokenRepository
 from src.domain.repositories.role_repository import IRoleRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
@@ -18,41 +20,82 @@ from src.infrastructure.models.user import User as UserModel
 
 
 class JWTTokenService(ITokenService):
-    def __init__(self, redis_service: IRedisService, role_repository: IRoleRepository, user_repository: IUserRepository):
+    def __init__(self, redis_service: IRedisService, role_repository: IRoleRepository, user_repository: IUserRepository, refresh_token_repository: IRefreshTokenRepository):
         self.redis_service = redis_service
         self.role_repository = role_repository
         self.user_repository = user_repository
+        self.refresh_token_repository = refresh_token_repository
 
-    async def create_app_token(self, user: UserEntity) -> AuthToken:
-        """Create new JWT token"""
+    async def create_token_pair(self, user: UserEntity) -> TokenPair:
+        """Create new access and refresh token pair"""
         try:
-            expires_delta = timedelta(
-                minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            expires_at = datetime.now() + expires_delta
-
-            if user.id is None:
-                raise TokenError("User not exist")
-
-            claims = {
-                "sub": str(user.id),
-                "email": user.email,
-                "name": user.name,
-                "exp": expires_at
-            }
+            # Create access token
+            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            access_token_expires_at = datetime.utcnow() + access_token_expires
 
             access_token = jwt.encode(
-                claims,
+                {
+                    "sub": str(user.id),
+                    "email": user.email,
+                    "name": user.name,
+                    "exp": access_token_expires_at
+                },
                 settings.JWT_SECRET,
                 algorithm=settings.JWT_ALGORITHM
             )
 
-            return AuthToken(
-                access_token=access_token,
-                expires_at=expires_at
+            # Create refresh token
+            refresh_token = secrets.token_urlsafe(64)
+            refresh_token_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRATION_TIME)
+            refresh_token_expires_at = datetime.now() + refresh_token_expires
+
+            # Store refresh token
+            await self.refresh_token_repository.create_refresh_token(
+                RefreshTokenEntity(
+                    token=refresh_token,
+                    user_id=user.id,
+                    expires_at=refresh_token_expires_at
+                )
             )
+
+            return TokenPair(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_type="bearer",
+                expires_in=int(access_token_expires.total_seconds())
+            )
+
         except Exception as e:
             log.error(f"Token creation error: {str(e)}")
-            raise TokenError("Failed to create token") from e
+            raise TokenError("Failed to create tokens") from e
+
+    async def refresh_tokens(self, refresh_token: str) -> TokenPair:
+        """Refresh access token using refresh token"""
+        try:
+            # Get refresh token from database
+            stored_token = await self.refresh_token_repository.get_by_token(refresh_token)
+            if not stored_token:
+                raise InvalidTokenError("Invalid refresh token")
+
+            # Check if token is expired or revoked
+            if stored_token.is_revoked:
+                raise InvalidTokenError("Refresh token has been revoked")
+            if stored_token.expires_at < datetime.utcnow():
+                raise TokenExpiredError("Refresh token has expired")
+
+            # Get user
+            user = await self.user_repository.get_user_by_id(stored_token.user_id)
+            if not user:
+                raise InvalidTokenError("User not found")
+
+            # Revoke old refresh token
+            await self.refresh_token_repository.revoke_token(refresh_token)
+
+            # Create new token pair
+            return await self.create_token_pair(user)
+        except Exception as e:
+            log.error(f"Token refresh error: {str(e)}")
+            raise TokenError("Failed to refresh tokens") from e
 
     async def verify_token(self, token: str) -> Optional[UserEntity]:
         """Verify JWT token"""
@@ -103,17 +146,3 @@ class JWTTokenService(ITokenService):
         except Exception as e:
             log.error(f"Error getting Microsoft token: {str(e)}")
             raise TokenError("Failed to get Microsoft token") from e
-
-    async def store_app_refresh_token(self, user_id: int, refresh_token: str) -> None:
-        """Store refresh token"""
-        # Implementation for storing refresh token into database
-        pass
-
-    async def store_microsoft_refresh_token(self, user_id, microsoft_refresh_token: str) -> None:
-        """Store microsoft refresh token"""
-        pass
-
-    async def refresh_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
-        """Refresh Microsoft access token if needed"""
-        # Implementation for refreshing Microsoft token
-        return ""

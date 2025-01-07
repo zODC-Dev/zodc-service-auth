@@ -20,25 +20,28 @@ from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchem
 from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
 
-from .common import get_redis_service, get_role_repository, get_token_service
+from .common import get_redis_service, get_refresh_token_repository, get_role_repository, get_token_service
 from .user import get_user_service
 
 
-async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository = Depends(get_role_repository)) -> SQLAlchemyAuthRepository:
+async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository=Depends(get_role_repository)) -> SQLAlchemyAuthRepository:
     """Dependency for auth repository"""
     user_repository = SQLAlchemyUserRepository(db)
     return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository)
+
 
 async def get_sso_service():
     """Dependency for SSO service"""
     return MicrosoftSSOService()
 
+
 async def get_auth_service(
-    auth_repository = Depends(get_auth_repository),
-    token_service = Depends(get_token_service),
-    sso_service = Depends(get_sso_service),
-    user_repository = Depends(get_user_repository),
-    redis_service = Depends(get_redis_service)
+    auth_repository=Depends(get_auth_repository),
+    token_service=Depends(get_token_service),
+    sso_service=Depends(get_sso_service),
+    user_repository=Depends(get_user_repository),
+    redis_service=Depends(get_redis_service),
+    refresh_token_repository=Depends(get_refresh_token_repository)
 ):
     """Dependency for auth service"""
     return AuthService(
@@ -46,14 +49,17 @@ async def get_auth_service(
         token_service=token_service,
         sso_service=sso_service,
         user_repository=user_repository,
-        redis_service=redis_service
+        redis_service=redis_service,
+        refresh_token_repository=refresh_token_repository
     )
 
+
 async def get_auth_controller(
-    auth_service = Depends(get_auth_service)
+    auth_service=Depends(get_auth_service)
 ):
     """Dependency for auth controller"""
     return AuthController(auth_service)
+
 
 async def verify_token(
     token: Annotated[str, Depends(oauth2_scheme)],
@@ -77,6 +83,7 @@ async def verify_token(
         log.error(f"Token verification error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token") from e
 
+
 async def get_current_user_id(
     payload: Annotated[Dict[str, Any], Depends(verify_token)]
 ) -> int:
@@ -86,12 +93,14 @@ async def get_current_user_id(
         raise InvalidTokenError("Invalid token payload")
     return int(user_id)
 
+
 async def get_current_user(
     user_id: Annotated[int, Depends(get_current_user_id)],
     user_service: Annotated[UserService, Depends(get_user_service)]
 ) -> User:
     """Get current user from database"""
     return await user_service.get_current_user(user_id)
+
 
 # Reusable dependency types
 TokenPayload = Annotated[Dict[str, Any], Depends(verify_token)]
