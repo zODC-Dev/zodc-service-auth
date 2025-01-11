@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 import jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.app.background.token_refresh import TokenRefreshScheduler
 from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
 from src.app.services.auth_service import AuthService
@@ -17,10 +18,17 @@ from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
+from src.infrastructure.services.jira_sso_service import JiraSSOService
 from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
 
-from .common import get_redis_service, get_refresh_token_repository, get_role_repository, get_token_service
+from .common import (
+    get_redis_service,
+    get_refresh_token_repository,
+    get_role_repository,
+    get_token_refresh_service,
+    get_token_service,
+)
 from .user import get_user_service
 
 
@@ -30,35 +38,55 @@ async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repositor
     return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository)
 
 
-async def get_sso_service():
-    """Dependency for SSO service"""
+async def get_microsoft_sso_service():
+    """Dependency for Microsoft SSO service"""
     return MicrosoftSSOService()
+
+
+async def get_jira_sso_service():
+    """Dependency for Jira SSO service"""
+    return JiraSSOService()
 
 
 async def get_auth_service(
     auth_repository=Depends(get_auth_repository),
     token_service=Depends(get_token_service),
-    sso_service=Depends(get_sso_service),
+    microsoft_sso_service=Depends(get_microsoft_sso_service),
+    jira_sso_service=Depends(get_jira_sso_service),
     user_repository=Depends(get_user_repository),
     redis_service=Depends(get_redis_service),
-    refresh_token_repository=Depends(get_refresh_token_repository)
+    refresh_token_repository=Depends(get_refresh_token_repository),
+    token_refresh_service=Depends(get_token_refresh_service)
 ):
     """Dependency for auth service"""
     return AuthService(
         auth_repository=auth_repository,
         token_service=token_service,
-        sso_service=sso_service,
+        microsoft_sso_service=microsoft_sso_service,
+        jira_sso_service=jira_sso_service,
         user_repository=user_repository,
         redis_service=redis_service,
-        refresh_token_repository=refresh_token_repository
+        refresh_token_repository=refresh_token_repository,
+        token_refresh_service=token_refresh_service
     )
 
 
+async def get_token_refresh_scheduler(
+    token_refresh_service=Depends(get_token_refresh_service)
+) -> TokenRefreshScheduler:
+    """Dependency for token refresh scheduler"""
+    return TokenRefreshScheduler(token_refresh_service)
+
+
 async def get_auth_controller(
-    auth_service=Depends(get_auth_service)
-):
+    auth_service=Depends(get_auth_service),
+    token_refresh_scheduler=Depends(get_token_refresh_scheduler)
+) -> AuthController:
     """Dependency for auth controller"""
-    return AuthController(auth_service)
+    return AuthController(
+        auth_service=auth_service,
+        token_refresh_scheduler=token_refresh_scheduler
+    )
 
 
 async def verify_token(

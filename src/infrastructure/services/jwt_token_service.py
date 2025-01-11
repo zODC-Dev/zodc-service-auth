@@ -8,6 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
 from src.configs.settings import settings
+from src.domain.constants.auth import TokenType
 from src.domain.entities.auth import RefreshTokenEntity, TokenPair
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenError, TokenExpiredError
@@ -15,23 +16,32 @@ from src.domain.repositories.refresh_token_repository import IRefreshTokenReposi
 from src.domain.repositories.role_repository import IRoleRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
+from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.token_service import ITokenService
 from src.infrastructure.models.user import User as UserModel
 
 
 class JWTTokenService(ITokenService):
-    def __init__(self, redis_service: IRedisService, role_repository: IRoleRepository, user_repository: IUserRepository, refresh_token_repository: IRefreshTokenRepository):
+    def __init__(
+        self,
+        redis_service: IRedisService,
+        role_repository: IRoleRepository,
+        user_repository: IUserRepository,
+        refresh_token_repository: IRefreshTokenRepository,
+        token_refresh_service: ITokenRefreshService
+    ):
         self.redis_service = redis_service
         self.role_repository = role_repository
         self.user_repository = user_repository
         self.refresh_token_repository = refresh_token_repository
+        self.token_refresh_service = token_refresh_service
 
     async def create_token_pair(self, user: UserEntity) -> TokenPair:
         """Create new access and refresh token pair"""
         try:
             # Create access token
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            access_token_expires_at = datetime.utcnow() + access_token_expires
+            access_token_expires_at = datetime.now() + access_token_expires
 
             access_token = jwt.encode(
                 {
@@ -80,7 +90,7 @@ class JWTTokenService(ITokenService):
             # Check if token is expired or revoked
             if stored_token.is_revoked:
                 raise InvalidTokenError("Refresh token has been revoked")
-            if stored_token.expires_at < datetime.utcnow():
+            if stored_token.expires_at < datetime.now():
                 raise TokenExpiredError("Refresh token has expired")
 
             # Get user
@@ -129,7 +139,7 @@ class JWTTokenService(ITokenService):
 
     async def get_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
         """Get Microsoft access token for user"""
-        cached_token = await self.redis_service.get_cached_token(user_id)
+        cached_token = await self.redis_service.get_cached_token(user_id, TokenType.MICROSOFT)
         if cached_token:
             return cached_token
 
@@ -146,3 +156,37 @@ class JWTTokenService(ITokenService):
         except Exception as e:
             log.error(f"Error getting Microsoft token: {str(e)}")
             raise TokenError("Failed to get Microsoft token") from e
+
+    async def get_valid_microsoft_token(self, user_id: int) -> str:
+        """Get valid Microsoft token"""
+        # Try to get from cache first
+        token = await self.redis_service.get_cached_token(user_id, TokenType.MICROSOFT)
+        if token:
+            return token
+
+        # If not in cache, refresh token
+        new_token = await self.token_refresh_service.refresh_microsoft_token(user_id)
+        if not new_token:
+            raise TokenError("Failed to get valid Microsoft token")
+
+        # Cache new token
+        await self.redis_service.cache_token(user_id, new_token, settings.MICROSOFT_TOKEN_EXPIRATION_TIME, TokenType.MICROSOFT)
+
+        return new_token
+
+    async def get_valid_jira_token(self, user_id: int) -> str:
+        """Get valid Jira token"""
+        # Try to get from cache first
+        token = await self.redis_service.get_cached_token(user_id, TokenType.JIRA)
+        if token:
+            return token
+
+        # If not in cache, refresh token
+        new_token = await self.token_refresh_service.refresh_jira_token(user_id)
+        if not new_token:
+            raise TokenError("Failed to get valid Jira token")
+
+        # Cache new token
+        await self.redis_service.cache_token(user_id, new_token, settings.JIRA_TOKEN_EXPIRATION_TIME, TokenType.JIRA)
+
+        return new_token

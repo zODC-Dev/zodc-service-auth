@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
@@ -48,6 +48,13 @@ class SQLAlchemyUserRepository(IUserRepository):
         await self.session.commit()
         await self.session.refresh(user)
         return self._to_domain(user)
+
+    async def update_user_by_id(self, user_id: int, user: UserEntity) -> None:
+        stmt = (
+            update(UserModel).where(UserModel.id == user_id).values(**user.model_dump(exclude={"id"}))  # type: ignore
+        )
+        await self.session.exec(stmt)  # type: ignore
+        await self.session.commit()
 
     def _to_domain(self, db_user: UserModel) -> UserEntity:
         """Convert DB model to domain entity"""

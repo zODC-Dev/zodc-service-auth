@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from .base import BaseEntity
 
@@ -21,6 +22,17 @@ class User(BaseEntity):
     user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
     system_role: Optional["Role"] = None
+    jira_token: Optional[str] = None
+    jira_refresh_token: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    # Microsoft tokens
+    microsoft_access_token: Optional[str] = None
+    microsoft_token_expires_at: Optional[datetime] = None
+
+    # Jira tokens
+    jira_access_token: Optional[str] = None
+    jira_token_expires_at: Optional[datetime] = None
 
 
 class UserCreate(BaseModel):

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+from src.domain.constants.auth import TokenType
+
 
 class IRedisService(ABC):
     @abstractmethod
@@ -19,11 +21,11 @@ class IRedisService(ABC):
         pass
 
     @abstractmethod
-    async def cache_token(self, user_id: int, access_token: str, expiry: int):
+    async def cache_token(self, user_id: int, access_token: str, expiry: int, token_type: TokenType):
         """Cache microsoft access token with expiry."""
         pass
 
     @abstractmethod
-    async def get_cached_token(self, user_id: int) -> str:
+    async def get_cached_token(self, user_id: int, token_type: TokenType) -> Optional[str]:
         """Get microsoft access token from cache if exists and valid."""
         pass

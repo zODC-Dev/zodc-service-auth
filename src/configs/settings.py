@@ -61,6 +61,13 @@ class Settings(BaseSettings):
 
     # Refresh token settings
     REFRESH_TOKEN_EXPIRATION_TIME: int = 60 * 60 * 24 * 30  # 30 days
+    MICROSOFT_TOKEN_EXPIRATION_TIME: int = 60 * 60 * 24 * 1  # 1 day
+    JIRA_TOKEN_EXPIRATION_TIME: int = 60 * 60 * 24 * 1  # 1 day
+
+    # Jira OAuth settings
+    JIRA_CLIENT_ID: str
+    JIRA_CLIENT_SECRET: str
+    JIRA_REDIRECT_URI: str
 
     class Config:
         """Configuration settings."""
