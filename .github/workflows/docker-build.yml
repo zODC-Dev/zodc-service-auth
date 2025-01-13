@@ -20,18 +20,12 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -t ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
-          if [[ ${{ github.ref }} == refs/heads/* ]]; then
-            docker tag ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ github.ref_name }}
-          fi
+          docker build -t ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ env.REGISTRY_PROJECT }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
 
       - name: Login to Docker Registry
         run: |
-          docker login ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }} -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_PASSWORD }}
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }} -u ${{ secrets.REGISTRY_USER }} --password-stdin
 
       - name: Push Image
         run: |
-          docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
-          if [[ ${{ github.ref }} == refs/heads/* ]]; then
-            docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ env.REGISTRY_PROJECT }}/${{ env.SERVICE_NAME }}:${{ github.ref_name }}
-          fi
+          docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ env.REGISTRY_PROJECT }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
