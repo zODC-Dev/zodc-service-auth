@@ -6,7 +6,7 @@ on:
       - main
       - dev
 env:
-  SERVICE_NAME: zodc-backend
+  SERVICE_NAME: zodc-service-auth
   VERSION: 0.1.0
   REGISTRY_PROJECT: zodc
 
