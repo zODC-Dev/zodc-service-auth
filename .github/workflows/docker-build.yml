@@ -6,9 +6,8 @@ on:
       - main
       - dev
 env:
-  REGISTRY_USER: zodc
-  REGISTRY_HOST: localhost
-  REGISTRY_PORT: 5000
+  SERVICE_NAME: zodc-backend
+  VERSION: 0.1.0
 
 jobs:
   build-and-push:
@@ -20,14 +19,18 @@ jobs:
 
       - name: Build Image
         run: |
-          podman build -t ${REGISTRY_HOST}:${REGISTRY_PORT}/${REGISTRY_USER}/zodc-backend:latest .
+          docker build -t ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT}/${secrets.REGISTRY_USER}/${SERVICE_NAME}:${VERSION} .
           if [[ ${{ github.ref }} == refs/heads/* ]]; then
-            podman tag ${REGISTRY_HOST}:${REGISTRY_PORT}/${REGISTRY_USER}/zodc-backend:latest ${REGISTRY_HOST}:${REGISTRY_PORT}/${REGISTRY_USER}/zodc-backend:${{ github.ref_name }}
+            docker tag ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT}/${secrets.REGISTRY_USER}/${SERVICE_NAME}:${VERSION} ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT}/${secrets.REGISTRY_USER}/${SERVICE_NAME}:${{ github.ref_name }}
           fi
+
+      - name: Login to Docker Registry
+        run: |
+          docker login ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT} -u ${secrets.REGISTRY_USER} -p ${secrets.REGISTRY_PASSWORD}
 
       - name: Push Image
         run: |
-          podman push ${REGISTRY_HOST}:${REGISTRY_PORT}/${REGISTRY_USER}/zodc-backend:latest
+          docker push ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT}/${secrets.REGISTRY_USER}/${SERVICE_NAME}:${VERSION}
           if [[ ${{ github.ref }} == refs/heads/* ]]; then
-            podman push ${REGISTRY_HOST}:${REGISTRY_PORT}/${REGISTRY_USER}/zodc-backend:${{ github.ref_name }}
+            docker push ${secrets.REGISTRY_HOST}:${secrets.REGISTRY_PORT}/${secrets.REGISTRY_USER}/${SERVICE_NAME}:${{ github.ref_name }}
           fi
