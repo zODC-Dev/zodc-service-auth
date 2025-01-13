@@ -8,6 +8,7 @@ on:
 env:
   SERVICE_NAME: zodc-backend
   VERSION: 0.1.0
+  REGISTRY_PROJECT: zodc
 
 jobs:
   build-and-push:
@@ -32,5 +33,5 @@ jobs:
         run: |
           docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
           if [[ ${{ github.ref }} == refs/heads/* ]]; then
-            docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ secrets.REGISTRY_USER }}/${{ env.SERVICE_NAME }}:${{ github.ref_name }}
+            docker push ${{ secrets.REGISTRY_HOST }}:${{ secrets.REGISTRY_PORT }}/${{ env.REGISTRY_PROJECT }}/${{ env.SERVICE_NAME }}:${{ github.ref_name }}
           fi
