@@ -18,6 +18,14 @@ class LoginSSOCallbackRequest(BaseModel):
     code_verifier: str
 
 
+class LoginJiraRequest(BaseModel):
+    pass
+
+
+class LoginJiraCallbackRequest(BaseModel):
+    code: str
+
+
 class TokenVerificationRequest(BaseModel):
     token: str
     permission: Optional[str] = None

@@ -8,16 +8,16 @@ from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.auth import MicrosoftIdentity
 from src.domain.exceptions.auth_exceptions import SSOError
-from src.domain.services.sso_service import ISSOService
+from src.domain.services.microsoft_sso_service import IMicrosoftSSOService
 
 
-class MicrosoftSSOService(ISSOService):
+class MicrosoftSSOService(IMicrosoftSSOService):
     COMMON_TENANT = 'common'
     TOKEN_ENDPOINT = f"https://login.microsoftonline.com/{
         COMMON_TENANT}/oauth2/v2.0"
     SCOPE = "openid profile email offline_access User.Read"
 
-    async def generate_auth_url(self, code_challenge: str) -> str:
+    async def generate_microsoft_auth_url(self, code_challenge: str) -> str:
         """Generate Microsoft SSO authentication URL"""
         try:
             state_token = self._generate_state_token()
@@ -36,15 +36,11 @@ class MicrosoftSSOService(ISSOService):
 
             return auth_url
         except Exception as e:
-            log.error(f"Failed to generate auth URL: {str(e)}")
-            raise SSOError("Failed to generate authentication URL") from e
+            log.error(f"Failed to generate Microsoft auth URL: {str(e)}")
+            raise SSOError("Failed to generate Microsoft authentication URL") from e
 
-    async def exchange_code(
-        self,
-        code: str,
-        code_verifier: str
-    ) -> MicrosoftIdentity:
-        """Exchange authorization code for microsoft user information"""
+    async def exchange_microsoft_code(self, code: str, code_verifier: str) -> MicrosoftIdentity:
+        """Exchange authorization code for Microsoft user information"""
         try:
             # Exchange code for tokens
             token_data = await self._exchange_code_for_token(code, code_verifier)
@@ -62,7 +58,7 @@ class MicrosoftSSOService(ISSOService):
                 scope=token_data.get("scope", "")
             )
         except Exception as e:
-            log.error(f"Failed to exchange code: {str(e)}")
+            log.error(f"Failed to exchange Microsoft code: {str(e)}")
             raise SSOError("Failed to authenticate with Microsoft") from e
 
     async def _exchange_code_for_token(self, code: str, code_verifier: str) -> Dict[str, Any]:

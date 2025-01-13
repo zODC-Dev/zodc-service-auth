@@ -27,3 +27,13 @@ class ITokenService(ABC):
     async def get_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
         """Get Microsoft token for user"""
         pass
+
+    @abstractmethod
+    async def get_valid_microsoft_token(self, user_id: int) -> str:
+        """Get valid Microsoft token, refreshing if necessary"""
+        pass
+
+    @abstractmethod
+    async def get_valid_jira_token(self, user_id: int) -> str:
+        """Get valid Jira token, refreshing if necessary"""
+        pass

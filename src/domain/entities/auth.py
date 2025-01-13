@@ -36,7 +36,7 @@ class RefreshTokenEntity(BaseModel):
     user_id: int
     expires_at: datetime
     is_revoked: bool = False
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class TokenPair(BaseModel):
@@ -44,3 +44,10 @@ class TokenPair(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class JiraIdentity(BaseModel):
+    access_token: str
+    refresh_token: Optional[str]
+    expires_in: int
+    scope: str

@@ -4,14 +4,16 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.app.controllers.auth_controller import AuthController
-from src.app.dependencies.auth import get_auth_controller
+from src.app.dependencies.auth import CurrentUser, get_auth_controller
 from src.app.schemas.requests.auth import (
     LoginEmailPasswordRequest,
+    LoginJiraCallbackRequest,
+    LoginJiraRequest,
     LoginSSOCallbackRequest,
     LoginSSORequest,
     RefreshTokenRequest,
 )
-from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlResponse
+from src.app.schemas.responses.auth import LoginJiraSuccessResponse, LoginSuccessResponse, LoginUrlResponse
 
 router = APIRouter()
 
@@ -26,21 +28,21 @@ async def login_by_email_password(
 
 
 @router.post("/microsoft", response_model=LoginUrlResponse)
-async def login_by_sso(
+async def login_by_microsoft(
     request: LoginSSORequest,
     controller: AuthController = Depends(get_auth_controller)
 ):
-    """Handle login by SSO request, return login url"""
-    return await controller.login_by_sso(request)
+    """Handle login by Microsoft SSO request"""
+    return await controller.login_by_microsoft(request)
 
 
 @router.post("/microsoft/callback", response_model=LoginSuccessResponse)
-async def sso_callback(
+async def microsoft_callback(
     request: LoginSSOCallbackRequest,
     controller: AuthController = Depends(get_auth_controller)
 ):
-    """Handle microsoft SSO callback, and return application access_token"""
-    return await controller.handle_sso_callback(request)
+    """Handle Microsoft SSO callback"""
+    return await controller.handle_microsoft_callback(request)
 
 
 @router.post("/token", response_model=LoginSuccessResponse)
@@ -63,3 +65,22 @@ async def refresh_tokens(
 ):
     """Refresh access token using refresh token"""
     return await controller.refresh_tokens(request)
+
+
+@router.post("/jira", response_model=LoginUrlResponse)
+async def login_by_jira(
+    request: LoginJiraRequest,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle login by Jira SSO request"""
+    return await controller.login_by_jira(request)
+
+
+@router.post("/jira/callback", response_model=LoginJiraSuccessResponse)
+async def jira_callback(
+    request: LoginJiraCallbackRequest,
+    current_user: CurrentUser,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle Jira SSO callback"""
+    return await controller.handle_jira_callback(request, current_user)

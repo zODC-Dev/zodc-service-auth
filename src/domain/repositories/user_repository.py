@@ -19,3 +19,8 @@ class IUserRepository(ABC):
     async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[User]:
         """Get user by ID with role permissions"""
         pass
+
+    @abstractmethod
+    async def update_user_by_id(self, user_id: int, user: User) -> None:
+        """Update user by ID"""
+        pass
