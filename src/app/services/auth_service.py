@@ -53,7 +53,6 @@ class AuthService:
 
     async def login_by_microsoft(self, code_challenge: str) -> str:
         """Initialize Microsoft SSO login flow"""
-        log.info(f"Generating Microsoft auth URL with code challenge: {code_challenge}")
         return await self.microsoft_sso_service.generate_microsoft_auth_url(code_challenge)
 
     async def login_by_jira(self) -> str:
@@ -68,7 +67,6 @@ class AuthService:
                 sso_credentials.code,
                 sso_credentials.code_verifier
             )
-            log.info(f"Microsoft info: {microsoft_info}")
 
             # Get or create user
             user = await self.user_repository.get_user_by_email(microsoft_info.email)
@@ -98,7 +96,6 @@ class AuthService:
 
             # Create access token
             token_pair = await self.token_service.create_token_pair(user)
-            log.info(f"Token pair: {token_pair}")
 
             # Schedule token refresh
             await self.token_refresh_service.schedule_token_refresh(user.id)

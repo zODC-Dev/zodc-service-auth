@@ -14,7 +14,6 @@ from src.app.schemas.requests.auth import (
     RefreshTokenRequest,
 )
 from src.app.schemas.responses.auth import LoginJiraSuccessResponse, LoginSuccessResponse, LoginUrlResponse
-from src.configs.logger import log
 
 router = APIRouter()
 
@@ -34,7 +33,6 @@ async def login_by_microsoft(
     controller: AuthController = Depends(get_auth_controller)
 ):
     """Handle login by Microsoft SSO request"""
-    log.info(f"Received Microsoft login request with code challenge: {request.code_challenge}")
     return await controller.login_by_microsoft(request)
 
 

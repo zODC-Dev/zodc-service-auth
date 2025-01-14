@@ -21,6 +21,7 @@ class SQLAlchemyRefreshTokenRepository(IRefreshTokenRepository):
             is_revoked=refresh_token.is_revoked,
             token_type=refresh_token.token_type
         )
+
         self.session.add(db_token)
         await self.session.commit()
         await self.session.refresh(db_token)
