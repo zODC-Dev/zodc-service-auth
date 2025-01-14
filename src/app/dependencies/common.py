@@ -38,12 +38,14 @@ async def get_role_repository(db: AsyncSession = Depends(get_db)) -> SQLAlchemyR
 
 async def get_token_refresh_service(
     redis_service=Depends(get_redis_service),
-    user_repository=Depends(get_user_repository)
+    user_repository=Depends(get_user_repository),
+    refresh_token_repository=Depends(get_refresh_token_repository)
 ) -> ITokenRefreshService:
     """Dependency for token refresh service"""
     return TokenRefreshService(
         redis_service=redis_service,
-        user_repository=user_repository
+        user_repository=user_repository,
+        refresh_token_repository=refresh_token_repository
     )
 
 

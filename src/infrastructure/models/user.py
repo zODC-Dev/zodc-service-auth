@@ -26,11 +26,6 @@ class User(BaseModelWithTimestamps, table=True):
     email: str = Field(unique=True, index=True)
     name: str
     password: Optional[str] = Field(default=None, max_length=60)
-    microsoft_id: Optional[str] = Field(default=None, unique=True)
-    microsoft_token: Optional[str] = Field(default=None)
-    microsoft_refresh_token: Optional[str] = Field(
-        default=None, max_length=255)
-
     is_active: bool = Field(default=True)
 
     # System-wide role (e.g., HR, System Admin)

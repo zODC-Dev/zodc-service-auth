@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
+from src.domain.constants.auth import TokenType
+
 
 class UserCredentials(BaseModel):
     email: EmailStr
@@ -37,6 +39,7 @@ class RefreshTokenEntity(BaseModel):
     expires_at: datetime
     is_revoked: bool = False
     created_at: datetime = Field(default_factory=datetime.now)
+    token_type: TokenType
 
 
 class TokenPair(BaseModel):

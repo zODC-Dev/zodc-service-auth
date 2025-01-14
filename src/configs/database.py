@@ -26,6 +26,7 @@ async def get_db():
         finally:
             await session.close()
 
+
 async def init_db() -> None:
     """Init database connection at runtime"""
     async with engine.begin() as conn:

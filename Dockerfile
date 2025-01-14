@@ -50,8 +50,12 @@ RUN mkdir -p /app/logs
 # Set working directory
 WORKDIR /app
 
+# Create an entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start the application
-CMD ["sh", "-c", "alembic upgrade head && python -m src.main"]
+# Use the entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]

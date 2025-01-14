@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from src.domain.constants.auth import TokenType
 from src.domain.entities.auth import RefreshTokenEntity
 
 
@@ -18,4 +19,9 @@ class IRefreshTokenRepository(ABC):
     @abstractmethod
     async def revoke_token(self, token: str) -> None:
         """Revoke a refresh token"""
+        pass
+
+    @abstractmethod
+    async def get_by_user_id_and_type(self, user_id: int, token_type: TokenType) -> Optional[RefreshTokenEntity]:
+        """Get refresh token by user id and token type"""
         pass

@@ -3,7 +3,7 @@ import secrets
 from typing import Optional
 
 import jwt
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
@@ -18,7 +18,7 @@ from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.token_service import ITokenService
-from src.infrastructure.models.user import User as UserModel
+from src.infrastructure.models.refresh_token import RefreshToken as RefreshTokenModel
 
 
 class JWTTokenService(ITokenService):
@@ -64,7 +64,8 @@ class JWTTokenService(ITokenService):
                 RefreshTokenEntity(
                     token=refresh_token,
                     user_id=user.id,
-                    expires_at=refresh_token_expires_at
+                    expires_at=refresh_token_expires_at,
+                    token_type=TokenType.APP
                 )
             )
 
@@ -146,8 +147,10 @@ class JWTTokenService(ITokenService):
         # Logic to retrieve from the database if not cached
         try:
             result = await db.exec(
-                select(UserModel.microsoft_token).where(
-                    UserModel.id == user_id)
+                select(RefreshTokenModel.token).where(
+                    RefreshTokenModel.user_id == user_id,
+                    RefreshTokenModel.token_type == TokenType.MICROSOFT
+                ).order_by(col(RefreshTokenModel.created_at).desc())
             )
             db_token = result.one_or_none()
             if not db_token:

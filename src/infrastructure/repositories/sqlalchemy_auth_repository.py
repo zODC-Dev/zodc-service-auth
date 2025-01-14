@@ -1,23 +1,28 @@
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.constants.auth import TokenType
 from src.domain.constants.roles import SystemRoles
 from src.domain.entities.auth import MicrosoftIdentity, UserCredentials
 from src.domain.entities.user import User as UserEntity
 from src.domain.exceptions.user_exceptions import UserCreationError
 from src.domain.repositories.auth_repository import IAuthRepository
+from src.domain.repositories.refresh_token_repository import IRefreshTokenRepository
+from src.domain.repositories.role_repository import IRoleRepository
+from src.domain.repositories.user_repository import IUserRepository
+from src.infrastructure.models.refresh_token import RefreshToken as RefreshTokenModel
 from src.infrastructure.models.user import User as UserModel
-from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
-from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from src.infrastructure.services.bcrypt_service import verify_password
 
 
 class SQLAlchemyAuthRepository(IAuthRepository):
-    def __init__(self, session: AsyncSession, user_repository: SQLAlchemyUserRepository, role_repository: SQLAlchemyRoleRepository):
+    def __init__(self, session: AsyncSession, user_repository: IUserRepository, role_repository: IRoleRepository, refresh_token_repository: IRefreshTokenRepository):
         self.session = session
         self.user_repository = user_repository
         self.role_repository = role_repository
+        self.refresh_token_repository = refresh_token_repository
 
     async def verify_credentials(
         self,
@@ -36,7 +41,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
         new_user = UserModel(
             email=microsoft_identity.email,
             name=microsoft_identity.name or microsoft_identity.email,
-            is_active=True
+            is_active=True,
         )
         self.session.add(new_user)
         await self.session.commit()
@@ -50,10 +55,20 @@ class SQLAlchemyAuthRepository(IAuthRepository):
 
         return self._to_domain(new_user)
 
-    async def update_refresh_token(self, user_id: int, refresh_token: str) -> None:
+    async def update_refresh_token(self, user_id: int, refresh_token: str, token_type: TokenType) -> None:
         user = await self.user_repository.get_user_by_id(user_id)
-        if user:
-            user.microsoft_refresh_token = refresh_token
+        if user and user.id:
+            existing_refresh_token = await self.refresh_token_repository.get_by_user_id_and_type(user.id, token_type)
+            if existing_refresh_token:
+                existing_refresh_token.is_revoked = True
+
+            new_refresh_token = RefreshTokenModel(
+                user_id=user.id,
+                token=refresh_token,
+                token_type=token_type,
+                expires_at=datetime.now() + timedelta(days=30)
+            )
+            await self.session.add(new_refresh_token)  # type: ignore
             await self.session.commit()
 
     def _to_domain(self, user: UserModel) -> UserEntity:

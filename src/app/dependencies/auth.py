@@ -17,7 +17,6 @@ from src.configs.logger import log
 from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
-from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
 from src.infrastructure.services.jira_sso_service import JiraSSOService
 from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
@@ -32,10 +31,9 @@ from .common import (
 from .user import get_user_service
 
 
-async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository=Depends(get_role_repository)) -> SQLAlchemyAuthRepository:
+async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository=Depends(get_role_repository), refresh_token_repository=Depends(get_refresh_token_repository), user_repository=Depends(get_user_repository)) -> SQLAlchemyAuthRepository:
     """Dependency for auth repository"""
-    user_repository = SQLAlchemyUserRepository(db)
-    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository)
+    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository, refresh_token_repository=refresh_token_repository)
 
 
 async def get_microsoft_sso_service():

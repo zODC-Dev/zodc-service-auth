@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
+
+from src.configs.logger import log
 from src.domain.constants.auth import TokenType
-from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
+from src.domain.entities.auth import RefreshTokenEntity, SSOCredentials, TokenPair, UserCredentials
 from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import (
     InvalidCredentialsError,
@@ -50,6 +53,7 @@ class AuthService:
 
     async def login_by_microsoft(self, code_challenge: str) -> str:
         """Initialize Microsoft SSO login flow"""
+        log.info(f"Generating Microsoft auth URL with code challenge: {code_challenge}")
         return await self.microsoft_sso_service.generate_microsoft_auth_url(code_challenge)
 
     async def login_by_jira(self) -> str:
@@ -57,36 +61,52 @@ class AuthService:
         return await self.jira_sso_service.generate_jira_auth_url()
 
     async def handle_microsoft_callback(self, sso_credentials: SSOCredentials) -> TokenPair:
-        """Handle Microsoft SSO callback"""
-        # Get user info from SSO provider
-        microsoft_info = await self.microsoft_sso_service.exchange_microsoft_code(
-            sso_credentials.code,
-            sso_credentials.code_verifier
-        )
+        try:
+            """Handle Microsoft SSO callback"""
+            # Get user info from SSO provider
+            microsoft_info = await self.microsoft_sso_service.exchange_microsoft_code(
+                sso_credentials.code,
+                sso_credentials.code_verifier
+            )
+            log.info(f"Microsoft info: {microsoft_info}")
 
-        # Get or create user
-        user = await self.user_repository.get_user_by_email(microsoft_info.email)
-        if user is None:
-            user = await self.auth_repository.create_sso_user(microsoft_info)
+            # Get or create user
+            user = await self.user_repository.get_user_by_email(microsoft_info.email)
+            if user is None:
+                user = await self.auth_repository.create_sso_user(microsoft_info)
 
-        if user.id is None:
-            raise UserCreationError("Something went wrong")
+            if user.id is None:
+                raise UserCreationError("Something went wrong")
 
-        # Store microsoft access token to redis
-        await self.redis_service.cache_token(
-            user_id=user.id,
-            access_token=microsoft_info.access_token,
-            expiry=microsoft_info.expires_in,
-            token_type=TokenType.MICROSOFT
-        )
+            # Store microsoft refresh token to refresh_tokens table
+            await self.refresh_token_repository.create_refresh_token(
+                RefreshTokenEntity(
+                    user_id=user.id,
+                    token=microsoft_info.refresh_token,
+                    expires_at=datetime.now() + timedelta(days=30),
+                    token_type=TokenType.MICROSOFT
+                )
+            )
 
-        # Create access token
-        token_pair = await self.token_service.create_token_pair(user)
+            # Store microsoft access token to redis
+            await self.redis_service.cache_token(
+                user_id=user.id,
+                access_token=microsoft_info.access_token,
+                expiry=microsoft_info.expires_in,
+                token_type=TokenType.MICROSOFT
+            )
 
-        # Schedule token refresh
-        await self.token_refresh_service.schedule_token_refresh(user.id)
+            # Create access token
+            token_pair = await self.token_service.create_token_pair(user)
+            log.info(f"Token pair: {token_pair}")
 
-        return token_pair
+            # Schedule token refresh
+            await self.token_refresh_service.schedule_token_refresh(user.id)
+
+            return token_pair
+        except Exception as e:
+            log.error(f"Error handling Microsoft callback: {e}")
+            raise e
 
     async def refresh_tokens(self, refresh_token: str) -> TokenPair:
         """Handle token refresh"""

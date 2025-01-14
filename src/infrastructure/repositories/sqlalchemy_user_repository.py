@@ -64,8 +64,5 @@ class SQLAlchemyUserRepository(IUserRepository):
             name=db_user.name,
             is_active=db_user.is_active,
             created_at=db_user.created_at,
-            microsoft_id=db_user.microsoft_id,
-            microsoft_refresh_token=db_user.microsoft_refresh_token,
-            microsoft_token=db_user.microsoft_token,
             system_role=db_user.system_role
         )

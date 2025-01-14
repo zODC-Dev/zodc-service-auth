@@ -54,9 +54,11 @@ class AuthController:
         request: LoginSSORequest
     ) -> LoginUrlResponse:
         try:
+            log.info(f"Received Microsoft login request with code challenge: {request.code_challenge}")
             auth_url = await self.auth_service.login_by_microsoft(
                 request.code_challenge
             )
+            log.info(f"Generated Microsoft auth URL: {auth_url}")
             return LoginUrlResponse(auth_url=auth_url)
         except Exception as e:
             raise HTTPException(
