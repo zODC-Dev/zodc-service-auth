@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 from src.domain.constants.auth import TokenType
+from src.domain.entities.auth import CachedToken
 
 
 class IRedisService(ABC):
@@ -26,7 +27,7 @@ class IRedisService(ABC):
         pass
 
     @abstractmethod
-    async def get_cached_token(self, user_id: int, token_type: TokenType) -> Optional[str]:
+    async def get_cached_token(self, user_id: int, token_type: TokenType) -> Optional[CachedToken]:
         """Get microsoft access token from cache if exists and valid."""
         pass
 

@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from typing import Any, Dict, Optional
 
 from redis.asyncio import Redis
 
+from src.configs.logger import log
 from src.domain.constants.auth import TokenType
+from src.domain.entities.auth import CachedToken
 from src.domain.services.redis_service import IRedisService
 
 
@@ -38,10 +40,11 @@ class RedisService(IRedisService):
     ) -> None:
         """Cache access token with expiry"""
         key = f"token:{token_type}:{user_id}"
+        expires_at = datetime.now().timestamp() + expiry  # Store as timestamp
         token_data = {
             "access_token": access_token,
-            "expires_at": (datetime.now() + timedelta(seconds=expiry)).timestamp(),
-            "token_type": token_type
+            "expires_at": expires_at,
+            "token_type": str(token_type)  # Convert enum to string
         }
         await self.set(key, token_data, expiry)
 
@@ -49,17 +52,32 @@ class RedisService(IRedisService):
         self,
         user_id: int,
         token_type: TokenType = TokenType.MICROSOFT
-    ) -> Optional[str]:
+    ) -> Optional[CachedToken]:
         """Get cached token if exists and valid"""
         key = f"token:{token_type}:{user_id}"
-        token_str: Optional[str] = await self.get(key)
-        if not token_str:
-            return None
-        token_data: Dict[str, Any] = json.loads(token_str)
+        token_dict: Optional[Dict[str, Any]] = await self.get(key)
+        log.info(f"Token dict: {token_dict}")
 
-        if token_data:
-            return token_data.get("access_token")
-        return None
+        if not token_dict:
+            return None
+
+        try:
+            token_data = CachedToken(
+                access_token=token_dict["access_token"],
+                expires_at=float(token_dict["expires_at"]),  # Convert to float
+                token_type=token_dict["token_type"]
+            )
+
+            if token_data.is_expired:
+                await self.delete(key)
+                return None
+
+            return token_data
+
+        except Exception as e:
+            log.error(f"Error parsing cached token: {e}")
+            await self.delete(key)
+            return None
 
     async def delete_cached_token(
         self,
