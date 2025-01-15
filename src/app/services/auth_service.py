@@ -76,7 +76,19 @@ class AuthService:
             if user.id is None:
                 raise UserCreationError("Something went wrong")
 
-            # Store microsoft refresh token to refresh_tokens table
+            # Revoke existing Microsoft tokens for this user
+            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
+                user_id=user.id,
+                token_type=TokenType.MICROSOFT
+            )
+
+            # Delete cached Microsoft token
+            await self.redis_service.delete_cached_token(
+                user_id=user.id,
+                token_type=TokenType.MICROSOFT
+            )
+
+            # Store new microsoft refresh token
             await self.refresh_token_repository.create_refresh_token(
                 RefreshTokenEntity(
                     user_id=user.id,
@@ -116,6 +128,24 @@ class AuthService:
 
         if user.id is None:
             raise UserNotFoundError("User not found")
+
+        # Revoke existing Jira tokens for this user
+        await self.refresh_token_repository.revoke_tokens_by_user_and_type(
+            user_id=user.id,
+            token_type=TokenType.JIRA
+        )
+
+        log.info(f"Jira info: {jira_info}")
+
+        # Store new Jira refresh token in database
+        if jira_info.refresh_token:
+            refresh_token = RefreshTokenEntity(
+                token=jira_info.refresh_token,
+                user_id=user.id,
+                token_type=TokenType.JIRA,
+                expires_at=datetime.now() + timedelta(days=30)  # Adjust expiry as needed
+            )
+            await self.refresh_token_repository.create_refresh_token(refresh_token)
 
         # Store Jira access token in Redis
         await self.redis_service.cache_token(

@@ -64,7 +64,7 @@ class RedisService(IRedisService):
     async def delete_cached_token(
         self,
         user_id: int,
-        token_type: str = "microsoft"
+        token_type: TokenType
     ) -> None:
         """Delete cached token"""
         key = f"token:{token_type}:{user_id}"

@@ -29,3 +29,8 @@ class IRedisService(ABC):
     async def get_cached_token(self, user_id: int, token_type: TokenType) -> Optional[str]:
         """Get microsoft access token from cache if exists and valid."""
         pass
+
+    @abstractmethod
+    async def delete_cached_token(self, user_id: int, token_type: TokenType):
+        """Delete cached token from Redis."""
+        pass
