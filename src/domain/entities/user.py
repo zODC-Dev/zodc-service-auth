@@ -17,6 +17,7 @@ class User(BaseEntity):
     name: Optional[str] = None
     is_active: bool = True
     microsoft_id: Optional[str] = None
+    jira_account_id: Optional[str] = None
 
     user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
@@ -43,5 +44,4 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
-    microsoft_refresh_token: Optional[str] = None
-    jira_refresh_token: Optional[str] = None
+    jira_account_id: Optional[str] = None

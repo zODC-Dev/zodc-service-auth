@@ -1,9 +1,11 @@
+import base64
 from datetime import datetime, timedelta
+import json
 
 from src.configs.logger import log
 from src.domain.constants.auth import TokenType
 from src.domain.entities.auth import RefreshTokenEntity, SSOCredentials, TokenPair, UserCredentials
-from src.domain.entities.user import User
+from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
     InvalidCredentialsError,
     UserNotFoundError,
@@ -123,39 +125,74 @@ class AuthService:
 
     async def handle_jira_callback(self, code: str, user: User) -> str:
         """Handle Jira SSO callback"""
-        # Get Jira tokens
-        jira_info = await self.jira_sso_service.exchange_jira_code(code)
+        try:
+            # Get Jira tokens
+            jira_info = await self.jira_sso_service.exchange_jira_code(code)
 
-        if user.id is None:
-            raise UserNotFoundError("User not found")
+            if user.id is None:
+                raise UserNotFoundError("User not found")
 
-        # Revoke existing Jira tokens for this user
-        await self.refresh_token_repository.revoke_tokens_by_user_and_type(
-            user_id=user.id,
-            token_type=TokenType.JIRA
-        )
+            # Extract Jira account ID from access token
+            jira_account_id = await self._extract_jira_account_id(jira_info.access_token)
 
-        log.info(f"Jira info: {jira_info}")
-
-        # Store new Jira refresh token in database
-        if jira_info.refresh_token:
-            refresh_token = RefreshTokenEntity(
-                token=jira_info.refresh_token,
-                user_id=user.id,
-                token_type=TokenType.JIRA,
-                expires_at=datetime.now() + timedelta(days=30)  # Adjust expiry as needed
+            # Update user with Jira account ID
+            await self.user_repository.update_user_by_id(
+                user.id,
+                UserUpdate(
+                    jira_account_id=jira_account_id
+                )
             )
-            await self.refresh_token_repository.create_refresh_token(refresh_token)
 
-        # Store Jira access token in Redis
-        await self.redis_service.cache_token(
-            user_id=user.id,
-            access_token=jira_info.access_token,
-            expiry=jira_info.expires_in,
-            token_type=TokenType.JIRA
-        )
+            # Revoke existing Jira tokens for this user
+            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
+                user_id=user.id,
+                token_type=TokenType.JIRA
+            )
 
-        # Schedule token refresh
-        await self.token_refresh_service.schedule_token_refresh(user.id)
+            # Store new Jira refresh token in database
+            if jira_info.refresh_token:
+                refresh_token = RefreshTokenEntity(
+                    token=jira_info.refresh_token,
+                    user_id=user.id,
+                    token_type=TokenType.JIRA,
+                    expires_at=datetime.now() + timedelta(days=30)
+                )
+                await self.refresh_token_repository.create_refresh_token(refresh_token)
 
-        return "success"
+            # Store Jira access token in Redis
+            await self.redis_service.cache_token(
+                user_id=user.id,
+                access_token=jira_info.access_token,
+                expiry=jira_info.expires_in,
+                token_type=TokenType.JIRA
+            )
+
+            # Schedule token refresh
+            await self.token_refresh_service.schedule_token_refresh(user.id)
+
+            return "success"
+        except Exception as e:
+            log.error(f"Error handling Jira callback: {e}")
+            raise e
+
+    async def _extract_jira_account_id(self, access_token: str) -> str:
+        """Extract Jira account ID from access token"""
+        try:
+            # Split token and get payload part
+            payload = access_token.split('.')[1]
+            # Add padding if needed
+            payload += '=' * (-len(payload) % 4)
+            # Decode base64
+            decoded = base64.b64decode(payload)
+            # Parse JSON
+            token_data = json.loads(decoded)
+            # Get sub claim which contains account ID
+            account_id: str = token_data.get('sub')
+
+            if not account_id:
+                raise ValueError("No account ID found in token")
+
+            return account_id
+        except Exception as e:
+            log.error(f"Error extracting Jira account ID: {e}")
+            raise ValueError("Failed to extract Jira account ID from token") from e

@@ -23,8 +23,10 @@ class UserBase(SQLModel):
 class User(BaseModelWithTimestamps, table=True):
     __tablename__ = "users"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
     name: str
+    jira_account_id: Optional[str] = Field(default=None)
     password: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = Field(default=True)
 

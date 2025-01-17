@@ -5,7 +5,7 @@ from sqlmodel import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
-from src.domain.entities.user import User as UserEntity
+from src.domain.entities.user import User as UserEntity, UserUpdate
 from src.domain.repositories.user_repository import IUserRepository
 from src.infrastructure.models.user import User as UserModel, UserCreate
 
@@ -49,9 +49,10 @@ class SQLAlchemyUserRepository(IUserRepository):
         await self.session.refresh(user)
         return self._to_domain(user)
 
-    async def update_user_by_id(self, user_id: int, user: UserEntity) -> None:
+    async def update_user_by_id(self, user_id: int, user: UserUpdate) -> None:
         stmt = (
-            update(UserModel).where(UserModel.id == user_id).values(**user.model_dump(exclude={"id"}))  # type: ignore
+            update(UserModel).where(UserModel.id == user_id).values(  # type: ignore
+                **user.model_dump(exclude={"id"}, exclude_none=True))
         )
         await self.session.exec(stmt)  # type: ignore
         await self.session.commit()
