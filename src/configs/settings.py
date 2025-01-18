@@ -48,10 +48,6 @@ class Settings(BaseSettings):
     CLIENT_AZURE_REDIRECT_URI: str = ""
     CLIENT_AZURE_CLIENT_SECRET: str = ""
 
-    # Azure Blob Storage settings
-    AZURE_STORAGE_CONNECTION_STRING: str = ""
-    AZURE_STORAGE_ACCOUNT: str = ""
-
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
     NATS_CLIENT_NAME: str = "auth_service"

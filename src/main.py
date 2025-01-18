@@ -11,7 +11,6 @@ from src.app.routers.project_router import router as project_router
 from src.app.routers.role_router import router as role_router
 from src.app.routers.task_router import router as task_router
 from src.app.routers.user_router import router as user_router
-from src.app.routers.util_router import router as util_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
@@ -63,8 +62,6 @@ app.include_router(task_router, prefix=settings.API_V1_STR +
                    "/tasks", tags=["tasks"])
 app.include_router(auth_router, prefix=settings.API_V1_STR +
                    "/auth", tags=["authentication"])
-app.include_router(util_router, prefix=settings.API_V1_STR +
-                   "/utils", tags=["utils"])
 app.include_router(user_router, prefix=settings.API_V1_STR +
                    "/users", tags=["users"])
 app.include_router(role_router, prefix=settings.API_V1_STR +
