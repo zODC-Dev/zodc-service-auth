@@ -43,7 +43,7 @@ class TokenRefreshService(ITokenRefreshService):
                         "client_id": settings.CLIENT_AZURE_CLIENT_ID,
                         "refresh_token": refresh_token.token,
                         "grant_type": "refresh_token",
-                        "scope": "User.Read email profile offline_access"
+                        "scope": "User.Read email profile offline_access openid"
                     }
                 )
                 data: Dict[str, str] = await response.json()

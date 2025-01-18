@@ -40,7 +40,6 @@ class JWTTokenService(ITokenService):
         """Create new access and refresh token pair"""
         try:
             # Create access token
-            log.info(f"Creating access token for user {user.id}")
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             access_token_expires_at = datetime.now() + access_token_expires
 
@@ -54,15 +53,11 @@ class JWTTokenService(ITokenService):
                 settings.JWT_SECRET,
                 algorithm=settings.JWT_ALGORITHM
             )
-            log.info(f"Creating access token for user {user.id} with token {
-                     access_token} and expiry {access_token_expires_at}")
 
             # Create refresh token
             refresh_token = secrets.token_urlsafe(64)
             refresh_token_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRATION_TIME)
             refresh_token_expires_at = datetime.now() + refresh_token_expires
-            log.info(f"Creating refresh token for user {user.id} with token {
-                     refresh_token} and expiry {refresh_token_expires_at}")
 
             # Store refresh token
             await self.refresh_token_repository.create_refresh_token(
@@ -190,7 +185,6 @@ class JWTTokenService(ITokenService):
         """Get valid Jira token"""
         # Try to get from cache first
         token = await self.redis_service.get_cached_token(user_id, TokenType.JIRA)
-        log.info(f"Jira token: {token}")
         if token:
             return token
 

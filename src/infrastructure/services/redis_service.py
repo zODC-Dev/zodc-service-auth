@@ -56,7 +56,6 @@ class RedisService(IRedisService):
         """Get cached token if exists and valid"""
         key = f"token:{token_type}:{user_id}"
         token_dict: Optional[Dict[str, Any]] = await self.get(key)
-        log.info(f"Token dict: {token_dict}")
 
         if not token_dict:
             return None

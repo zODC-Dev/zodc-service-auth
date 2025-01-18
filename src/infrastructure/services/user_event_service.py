@@ -29,7 +29,7 @@ class UserEventService(IUserEventService):
                 message=event.model_dump()
             )
 
-            log.info(f"Published user event: {event_type.value} for user {user_id}")
+            log.debug(f"Published user event: {event_type.value} for user {user_id}")
         except Exception as e:
             log.error(f"Failed to publish user event: {str(e)}")
             raise
