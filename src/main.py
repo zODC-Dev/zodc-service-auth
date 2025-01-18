@@ -40,12 +40,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
-    lifespan=lifespan,
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": True,
-        "clientId": settings.CLIENT_AZURE_CLIENT_ID,
-        "appName": settings.APP_NAME,
-    },
+    lifespan=lifespan
+    # swagger_ui_init_oauth={
+    #     "usePkceWithAuthorizationCodeGrant": True,
+    #     "clientId": settings.CLIENT_AZURE_CLIENT_ID,
+    #     "appName": settings.APP_NAME,
+    # },
 )
 
 if settings.BACKEND_CORS_ORIGINS:
