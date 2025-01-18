@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
-from sqlmodel import and_, col, select
+from sqlmodel import and_, col, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.constants.auth import TokenType
@@ -55,6 +56,37 @@ class SQLAlchemyRefreshTokenRepository(IRefreshTokenRepository):
         )
         db_token = result.first()
         return self._to_domain(db_token) if db_token else None
+
+    async def revoke_tokens_by_user_and_type(self, user_id: int, token_type: TokenType) -> None:
+        """Revoke all tokens of a specific type for a user"""
+        stmt = (
+            update(RefreshTokenModel)
+            .where(
+                and_(
+                    RefreshTokenModel.user_id == user_id,
+                    RefreshTokenModel.token_type == token_type,
+                    RefreshTokenModel.is_revoked == False  # noqa: E712
+                )
+            )
+            .values(is_revoked=True)
+        )
+        await self.session.exec(stmt)  # type: ignore
+        await self.session.commit()
+
+    async def cleanup_expired_tokens(self) -> None:
+        """Clean up expired tokens by marking them as revoked"""
+        stmt = (
+            update(RefreshTokenModel)
+            .where(
+                and_(
+                    RefreshTokenModel.expires_at < datetime.now(),
+                    RefreshTokenModel.is_revoked == False  # noqa: E712
+                )
+            )
+            .values(is_revoked=True)
+        )
+        await self.session.exec(stmt)  # type: ignore
+        await self.session.commit()
 
     def _to_domain(self, db_token: RefreshTokenModel) -> RefreshTokenEntity:
         return RefreshTokenEntity(

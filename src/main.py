@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.calendar_router import router as calendar_router
+from src.app.routers.internal_router import router as internal_router
 from src.app.routers.permission_router import router as permission_router
 from src.app.routers.project_router import router as project_router
 from src.app.routers.role_router import router as role_router
@@ -75,6 +76,8 @@ app.include_router(permission_router, prefix=settings.API_V1_STR +
                    "/permissions", tags=["permissions"])
 app.include_router(project_router, prefix=settings.API_V1_STR +
                    "/projects", tags=["projects"])
+app.include_router(internal_router, prefix=settings.API_V1_STR +
+                   "/internal", tags=["internal"])
 
 
 if __name__ == "__main__":

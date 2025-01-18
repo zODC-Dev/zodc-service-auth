@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.entities.user import User
+from src.domain.entities.user import User, UserUpdate
 
 
 class IUserRepository(ABC):
@@ -21,6 +21,6 @@ class IUserRepository(ABC):
         pass
 
     @abstractmethod
-    async def update_user_by_id(self, user_id: int, user: User) -> None:
+    async def update_user_by_id(self, user_id: int, user: UserUpdate) -> None:
         """Update user by ID"""
         pass

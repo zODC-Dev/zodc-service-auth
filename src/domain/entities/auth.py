@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -54,3 +54,21 @@ class JiraIdentity(BaseModel):
     refresh_token: Optional[str]
     expires_in: int
     scope: str
+
+
+class CachedToken(BaseModel):
+    """Model for cached tokens"""
+    access_token: str
+    expires_at: Union[float, datetime]  # Allow both float and datetime
+    token_type: Union[TokenType, str]  # Allow both TokenType enum and string
+
+    @property
+    def is_expired(self) -> bool:
+        """Check if token is expired"""
+        if isinstance(self.expires_at, datetime):
+            return datetime.now() > self.expires_at
+        return datetime.now().timestamp() > self.expires_at
+
+    class Config:
+        """Pydantic config"""
+        arbitrary_types_allowed = True

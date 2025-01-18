@@ -5,14 +5,21 @@ from sqlmodel import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
-from src.domain.entities.user import User as UserEntity
+from src.domain.constants.user_events import UserEventType
+from src.domain.entities.user import User as UserEntity, UserUpdate
 from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.user_event_service import IUserEventService
 from src.infrastructure.models.user import User as UserModel, UserCreate
 
 
 class SQLAlchemyUserRepository(IUserRepository):
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self,
+        session: AsyncSession,
+        user_event_service: IUserEventService
+    ):
         self.session = session
+        self.user_event_service = user_event_service
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
         result = await self.session.exec(
@@ -49,12 +56,28 @@ class SQLAlchemyUserRepository(IUserRepository):
         await self.session.refresh(user)
         return self._to_domain(user)
 
-    async def update_user_by_id(self, user_id: int, user: UserEntity) -> None:
+    async def update_user_by_id(self, user_id: int, user: UserUpdate) -> None:
         stmt = (
-            update(UserModel).where(UserModel.id == user_id).values(**user.model_dump(exclude={"id"}))  # type: ignore
+            update(UserModel).where(UserModel.id == user_id).values(  # type: ignore
+                **user.model_dump(exclude={"id"}, exclude_none=True))
         )
         await self.session.exec(stmt)  # type: ignore
         await self.session.commit()
+
+        # Publish user update event
+        await self.user_event_service.publish_user_event(
+            user_id=user_id,
+            event_type=UserEventType.USER_UPDATED,
+            data=user.model_dump(exclude_none=True)
+        )
+
+        # If user is being activated/deactivated, publish specific event
+        if user.is_active is not None:
+            event_type = UserEventType.USER_ACTIVATED if user.is_active else UserEventType.USER_DEACTIVATED
+            await self.user_event_service.publish_user_event(
+                user_id=user_id,
+                event_type=event_type
+            )
 
     def _to_domain(self, db_user: UserModel) -> UserEntity:
         """Convert DB model to domain entity"""
