@@ -6,6 +6,7 @@ from src.configs.database import get_db
 from src.configs.redis import get_redis_client
 from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.user_event_service import IUserEventService
+from src.infrastructure.repositories.sqlalchemy_permission_repository import SQLAlchemyPermissionRepository
 from src.infrastructure.repositories.sqlalchemy_refresh_token_repository import SQLAlchemyRefreshTokenRepository
 from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
@@ -28,6 +29,11 @@ async def get_user_event_service(
 ) -> IUserEventService:
     """Dependency for user event service"""
     return UserEventService(nats_service=nats_service)
+
+
+async def get_permission_repository(db: AsyncSession = Depends(get_db)):
+    """Get dependencies for permission_repository"""
+    return SQLAlchemyPermissionRepository(db)
 
 
 async def get_refresh_token_repository(
@@ -76,7 +82,8 @@ async def get_token_service(
     role_repository: SQLAlchemyRoleRepository = Depends(get_role_repository),
     user_repository: SQLAlchemyUserRepository = Depends(get_user_repository),
     refresh_token_repository: SQLAlchemyRefreshTokenRepository = Depends(get_refresh_token_repository),
-    token_refresh_service: ITokenRefreshService = Depends(get_token_refresh_service)
+    token_refresh_service: ITokenRefreshService = Depends(get_token_refresh_service),
+    permission_repository: SQLAlchemyPermissionRepository = Depends(get_permission_repository)
 ) -> JWTTokenService:
     """Dependency for token service"""
     return JWTTokenService(
@@ -84,5 +91,6 @@ async def get_token_service(
         role_repository=role_repository,
         user_repository=user_repository,
         refresh_token_repository=refresh_token_repository,
-        token_refresh_service=token_refresh_service
+        token_refresh_service=token_refresh_service,
+        permission_repository=permission_repository
     )

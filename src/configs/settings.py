@@ -20,8 +20,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # JWT settings
-    JWT_SECRET: str
-    JWT_ALGORITHM: str = "HS256"
+    JWT_ALGORITHM: str = "RS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Logging
@@ -64,6 +63,11 @@ class Settings(BaseSettings):
     JIRA_CLIENT_ID: str
     JIRA_CLIENT_SECRET: str
     JIRA_REDIRECT_URI: str
+
+    # New JWT settings
+    JWT_PRIVATE_KEY_PATH: str = "keys/jwt-private.pem"
+    JWT_PUBLIC_KEY_PATH: str = "keys/jwt-public.pem"
+    JWT_ISSUER: str = "zodc-service-auth"
 
     class Config:
         """Configuration settings."""

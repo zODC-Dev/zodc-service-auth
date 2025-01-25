@@ -62,20 +62,20 @@ class PermissionService(IPermissionService):
             # Get user's permissions from database
             allowed = False
             if payload.scope == "system":
-                user_permissions = await self.permission_repository.get_user_system_permissions(
+                system_permissions = await self.permission_repository.get_system_permissions_by_user_id(
                     payload.user_id
                 )
-                user_permission_names = [p.name for p in user_permissions]
+                user_permission_names = [p.name for p in system_permissions.permissions]
                 # Check if user has ALL required permissions
                 allowed = all(
                     perm in user_permission_names for perm in payload.permissions)
 
             elif payload.scope == "project" and payload.project_id:
-                user_permissions = await self.permission_repository.get_user_project_permissions(
+                project_permissions = await self.permission_repository.get_permissions_of_project_by_user_id(
                     payload.user_id,
                     payload.project_id
                 )
-                user_permission_names = [p.name for p in user_permissions]
+                user_permission_names = [p.name for p in project_permissions]
                 # Check if user has ALL required permissions
                 allowed = all(
                     perm in user_permission_names for perm in payload.permissions)

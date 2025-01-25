@@ -11,9 +11,10 @@ from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
 from src.app.services.auth_service import AuthService
 from src.app.services.user_service import UserService
-from src.configs.auth import JWT_SETTINGS, oauth2_scheme
+from src.configs.auth import oauth2_scheme
 from src.configs.database import get_db
 from src.configs.logger import log
+from src.configs.settings import settings
 from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
@@ -36,12 +37,12 @@ async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repositor
     return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository, refresh_token_repository=refresh_token_repository)
 
 
-async def get_microsoft_sso_service():
+async def get_microsoft_sso_service() -> MicrosoftSSOService:
     """Dependency for Microsoft SSO service"""
-    return MicrosoftSSOService()
+    return MicrosoftSSOService()  # type: ignore
 
 
-async def get_jira_sso_service():
+async def get_jira_sso_service() -> JiraSSOService:
     """Dependency for Jira SSO service"""
     return JiraSSOService()
 
@@ -93,11 +94,15 @@ async def verify_token(
 ) -> Dict[str, Any]:
     """Base token verification"""
     try:
+        # Read the secret key from the file
+        with open(settings.JWT_PUBLIC_KEY_PATH, "rb") as key_file:
+            secret_key = key_file.read()
+
         # Verify and decode token
         payload: Dict[str, Any] = jwt.decode(
             token,
-            JWT_SETTINGS["SECRET_KEY"],
-            algorithms=[JWT_SETTINGS["ALGORITHM"]]
+            key=secret_key,
+            algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
 

@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 from src.domain.entities.permission import Permission
 from src.domain.entities.role import Role, RoleCreate, RoleUpdate
 from src.domain.entities.user_project_role import UserProjectRole
+from src.domain.value_objects.roles import ProjectRole, SystemRole
 
 
 class IRoleRepository(ABC):
@@ -16,15 +17,15 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_user_system_role(self, user_id: int) -> Optional[Role]:
+    async def get_system_role_by_user_id(self, user_id: int) -> Optional[SystemRole]:
         pass
 
     @abstractmethod
-    async def get_user_project_roles(
+    async def get_project_roles_by_user_id(
         self,
         user_id: int,
         project_id: Optional[int] = None
-    ) -> List[Role]:
+    ) -> List[ProjectRole]:
         pass
 
     @abstractmethod

@@ -8,6 +8,7 @@ from src.configs.settings import settings
 
 security = HTTPBearer()
 
+
 class JWTAuth:
     def __init__(
         self,
@@ -31,7 +32,7 @@ class JWTAuth:
             token = credentials.credentials
             payload = jwt.decode(
                 token,
-                settings.JWT_SECRET,
+                settings.JWT_PRIVATE_KEY_PATH,
                 algorithms=[settings.JWT_ALGORITHM]
             )
 

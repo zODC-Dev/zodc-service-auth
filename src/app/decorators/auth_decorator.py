@@ -29,7 +29,7 @@ def require_permissions(
                 access_token = auth_header.split(' ')[1]
                 token_payload = jwt.decode(
                     access_token,
-                    settings.JWT_SECRET,
+                    settings.JWT_PRIVATE_KEY_PATH,
                     algorithms=[settings.JWT_ALGORITHM]
                 )
 

@@ -17,6 +17,22 @@ class MicrosoftSSOService(IMicrosoftSSOService):
         COMMON_TENANT}/oauth2/v2.0"
     SCOPE = "openid profile email offline_access User.Read"
 
+    _private_key: bytes
+    _public_key: bytes
+
+    def __init__(self):
+        # Read private and public keys
+        try:
+            with open(settings.JWT_PRIVATE_KEY_PATH, 'rb') as private_key_file:
+                self._private_key = private_key_file.read()
+
+            with open(settings.JWT_PUBLIC_KEY_PATH, 'rb') as public_key_file:
+                self._public_key = public_key_file.read()
+
+        except Exception as e:
+            log.error(f"Failed to load JWT keys: {str(e)}")
+            raise SSOError("Failed to initialize Microsoft SSO service") from e
+
     async def generate_microsoft_auth_url(self, code_challenge: str) -> str:
         """Generate Microsoft SSO authentication URL"""
         try:
@@ -102,6 +118,6 @@ class MicrosoftSSOService(IMicrosoftSSOService):
                 "exp": datetime.now().timestamp() + 600,  # 10 minutes
                 "iat": datetime.now().timestamp()
             },
-            settings.JWT_SECRET,
+            key=self._private_key,
             algorithm=settings.JWT_ALGORITHM
         ))
