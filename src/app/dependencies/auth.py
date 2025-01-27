@@ -1,59 +1,96 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict
+from functools import partial
+from typing import Annotated, Any, Callable, Dict, List, Optional, TypeVar
 
 from fastapi import Depends, HTTPException
 import jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.app.background.token_refresh import TokenRefreshScheduler
 from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
+from src.app.middlewares.auth_middleware import JWTAuth
 from src.app.services.auth_service import AuthService
 from src.app.services.user_service import UserService
-from src.configs.auth import JWT_SETTINGS, oauth2_scheme
+from src.configs.auth import oauth2_scheme
 from src.configs.database import get_db
 from src.configs.logger import log
+from src.configs.settings import settings
 from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
-from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
+from src.infrastructure.services.jira_sso_service import JiraSSOService
 from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
 
-from .common import get_redis_service, get_role_repository, get_token_service
+from .common import (
+    get_redis_service,
+    get_refresh_token_repository,
+    get_role_repository,
+    get_token_refresh_service,
+    get_token_service,
+)
 from .user import get_user_service
 
+T = TypeVar('T', bound=Dict[str, Any])
 
-async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository = Depends(get_role_repository)) -> SQLAlchemyAuthRepository:
+
+async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository=Depends(get_role_repository), refresh_token_repository=Depends(get_refresh_token_repository), user_repository=Depends(get_user_repository)) -> SQLAlchemyAuthRepository:
     """Dependency for auth repository"""
-    user_repository = SQLAlchemyUserRepository(db)
-    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository)
+    return SQLAlchemyAuthRepository(session=db, user_repository=user_repository, role_repository=role_repository, refresh_token_repository=refresh_token_repository)
 
-async def get_sso_service():
-    """Dependency for SSO service"""
-    return MicrosoftSSOService()
+
+async def get_microsoft_sso_service() -> MicrosoftSSOService:
+    """Dependency for Microsoft SSO service"""
+    return MicrosoftSSOService()  # type: ignore
+
+
+async def get_jira_sso_service() -> JiraSSOService:
+    """Dependency for Jira SSO service"""
+    return JiraSSOService()
+
 
 async def get_auth_service(
-    auth_repository = Depends(get_auth_repository),
-    token_service = Depends(get_token_service),
-    sso_service = Depends(get_sso_service),
-    user_repository = Depends(get_user_repository),
-    redis_service = Depends(get_redis_service)
+    auth_repository=Depends(get_auth_repository),
+    token_service=Depends(get_token_service),
+    microsoft_sso_service=Depends(get_microsoft_sso_service),
+    jira_sso_service=Depends(get_jira_sso_service),
+    user_repository=Depends(get_user_repository),
+    redis_service=Depends(get_redis_service),
+    refresh_token_repository=Depends(get_refresh_token_repository),
+    token_refresh_service=Depends(get_token_refresh_service)
 ):
     """Dependency for auth service"""
     return AuthService(
         auth_repository=auth_repository,
         token_service=token_service,
-        sso_service=sso_service,
+        microsoft_sso_service=microsoft_sso_service,
+        jira_sso_service=jira_sso_service,
         user_repository=user_repository,
-        redis_service=redis_service
+        redis_service=redis_service,
+        refresh_token_repository=refresh_token_repository,
+        token_refresh_service=token_refresh_service
     )
 
+
+async def get_token_refresh_scheduler(
+    token_refresh_service=Depends(get_token_refresh_service)
+) -> TokenRefreshScheduler:
+    """Dependency for token refresh scheduler"""
+    return TokenRefreshScheduler(token_refresh_service)
+
+
 async def get_auth_controller(
-    auth_service = Depends(get_auth_service)
-):
+    auth_service=Depends(get_auth_service),
+    token_refresh_scheduler=Depends(get_token_refresh_scheduler)
+) -> AuthController:
     """Dependency for auth controller"""
-    return AuthController(auth_service)
+    return AuthController(
+        auth_service=auth_service,
+        token_refresh_scheduler=token_refresh_scheduler
+    )
+
 
 async def verify_token(
     token: Annotated[str, Depends(oauth2_scheme)],
@@ -61,11 +98,15 @@ async def verify_token(
 ) -> Dict[str, Any]:
     """Base token verification"""
     try:
+        # Read the secret key from the file
+        with open(settings.JWT_PUBLIC_KEY_PATH, "rb") as key_file:
+            secret_key = key_file.read()
+
         # Verify and decode token
         payload: Dict[str, Any] = jwt.decode(
             token,
-            JWT_SETTINGS["SECRET_KEY"],
-            algorithms=[JWT_SETTINGS["ALGORITHM"]]
+            key=secret_key,
+            algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
 
@@ -77,6 +118,7 @@ async def verify_token(
         log.error(f"Token verification error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token") from e
 
+
 async def get_current_user_id(
     payload: Annotated[Dict[str, Any], Depends(verify_token)]
 ) -> int:
@@ -86,6 +128,7 @@ async def get_current_user_id(
         raise InvalidTokenError("Invalid token payload")
     return int(user_id)
 
+
 async def get_current_user(
     user_id: Annotated[int, Depends(get_current_user_id)],
     user_service: Annotated[UserService, Depends(get_user_service)]
@@ -93,7 +136,38 @@ async def get_current_user(
     """Get current user from database"""
     return await user_service.get_current_user(user_id)
 
+
 # Reusable dependency types
 TokenPayload = Annotated[Dict[str, Any], Depends(verify_token)]
 CurrentUserId = Annotated[int, Depends(get_current_user_id)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_auth(
+    *,
+    system_roles: Optional[List[str]] = None,
+    project_roles: Optional[List[str]] = None,
+    permissions: Optional[List[str]] = None,
+    require_all: bool = False
+) -> Callable[[Any], Dict[str, Any]]:
+    """Factory function for creating auth dependencies"""
+    auth_dependency = JWTAuth(
+        required_system_roles=system_roles,
+        required_project_roles=project_roles,
+        required_permissions=permissions,
+        require_all_roles=require_all
+    )
+    return Depends(auth_dependency)  # type: ignore
+
+
+# Common auth patterns as class attributes
+require_admin = staticmethod(partial(require_auth, system_roles=["admin"]))
+require_user = staticmethod(partial(require_auth, system_roles=["user"]))
+require_project_admin = staticmethod(partial(require_auth, project_roles=["project_admin"]))
+require_project_management = staticmethod(
+    partial(
+        require_auth,
+        project_roles=["project_admin"],
+        require_all=True
+    )
+)

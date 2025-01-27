@@ -1,16 +1,22 @@
+from datetime import datetime, timezone
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from redis.asyncio import Redis
 
+from src.configs.logger import log
+from src.domain.constants.auth import TokenType
+from src.domain.entities.auth import CachedToken
+from src.domain.services.redis_service import IRedisService
 
-class RedisService:
+
+class RedisService(IRedisService):
     """Service for managing Redis operations."""
 
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Any:
+    async def get(self, key: str) -> Optional[Any]:
         """Get a value from Redis by key."""
         value = await self.redis.get(key)
         if value:
@@ -25,20 +31,58 @@ class RedisService:
         """Delete a key from Redis."""
         await self.redis.delete(key)
 
-    async def cache_token(self, user_id: int, access_token: str, expiry: int) -> None:
-        """Cache microsoft access token with expiry."""
-        key = f"msft_token:{user_id}"
-        token_data = {"access_token": access_token, "expiry": expiry}
+    async def cache_token(
+        self,
+        user_id: int,
+        access_token: str,
+        expiry: int,
+        token_type: TokenType = TokenType.MICROSOFT
+    ) -> None:
+        """Cache access token with expiry"""
+        key = f"token:{token_type}:{user_id}"
+        expires_at = (datetime.now(timezone.utc).timestamp() + expiry)  # Store as timestamp
+        token_data = {
+            "access_token": access_token,
+            "expires_at": expires_at,
+            "token_type": str(token_type)  # Convert enum to string
+        }
         await self.set(key, token_data, expiry)
 
-    async def get_cached_token(self, user_id: int) -> str:
-        """Get microsoft access token from cache if exists and valid."""
-        key = f"msft_token:{user_id}"
-        token_data = await self.get(key)
+    async def get_cached_token(
+        self,
+        user_id: int,
+        token_type: TokenType = TokenType.MICROSOFT
+    ) -> Optional[CachedToken]:
+        """Get cached token if exists and valid"""
+        key = f"token:{token_type}:{user_id}"
+        token_dict: Optional[Dict[str, Any]] = await self.get(key)
 
-        if token_data:
-            # expiry = datetime.fromisoformat(cast(str, token_data["expiry"]))
-            # if expiry > datetime.now():
-            access_token: str = token_data.get("access_token", "")
-            return access_token
-        return ""
+        if not token_dict:
+            return None
+
+        try:
+            token_data = CachedToken(
+                access_token=token_dict["access_token"],
+                expires_at=float(token_dict["expires_at"]),  # Convert to float
+                token_type=token_dict["token_type"]
+            )
+
+            if token_data.is_expired:
+                await self.delete(key)
+                return None
+
+            return token_data
+
+        except Exception as e:
+            log.error(f"Error parsing cached token: {e}")
+            await self.delete(key)
+            return None
+
+    async def delete_cached_token(
+        self,
+        user_id: int,
+        token_type: TokenType
+    ) -> None:
+        """Delete cached token"""
+        key = f"token:{token_type}:{user_id}"
+        await self.delete(key)

@@ -15,10 +15,18 @@ class Permission(BaseModelWithTimestamps, table=True):
 
     name: str = Field(unique=True, index=True)
     description: Optional[str] = None
+    group: Optional[str] = None
 
     # Use actual model class for link_model
     roles: List["Role"] = Relationship(
         back_populates="permissions",
         link_model=RolePermission,
-        sa_relationship_kwargs={"lazy": "selectin"}
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "permission,role,role_permissions"}
+    )
+
+    role_permissions: List["RolePermission"] = Relationship(
+        back_populates="permission",
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "permissions,roles"}
     )

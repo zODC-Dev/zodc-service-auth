@@ -23,14 +23,11 @@ class UserBase(SQLModel):
 class User(BaseModelWithTimestamps, table=True):
     __tablename__ = "users"
 
+    id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
     name: str
+    jira_account_id: Optional[str] = Field(default=None)
     password: Optional[str] = Field(default=None, max_length=60)
-    microsoft_id: Optional[str] = Field(default=None, unique=True)
-    microsoft_token: Optional[str] = Field(default=None)
-    microsoft_refresh_token: Optional[str] = Field(
-        default=None, max_length=255)
-
     is_active: bool = Field(default=True)
 
     # System-wide role (e.g., HR, System Admin)
@@ -46,14 +43,14 @@ class User(BaseModelWithTimestamps, table=True):
         link_model=UserProjectRole,
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "project_roles,user"
+            "overlaps": "project,user,user_project_roles"
         }
     )
     user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "projects"
+            "overlaps": "projects,users"
         }
     )
 

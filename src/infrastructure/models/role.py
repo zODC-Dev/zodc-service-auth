@@ -29,7 +29,14 @@ class Role(BaseModelWithTimestamps, table=True):
     permissions: List["Permission"] = Relationship(
         back_populates="roles",
         link_model=RolePermission,
-        sa_relationship_kwargs={"lazy": "selectin"}
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "role,permission"}
+    )
+
+    role_permissions: List["RolePermission"] = Relationship(
+        back_populates="role",
+        sa_relationship_kwargs={"lazy": "selectin",
+                                "overlaps": "permissions"}
     )
 
     # Direct relationship with UserProjectRole entries

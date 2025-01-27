@@ -1689,6 +1689,21 @@ files = [
 ]
 
 [[package]]
+name = "nats-py"
+version = "2.9.0"
+description = "NATS client for Python"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "nats_py-2.9.0.tar.gz", hash = "sha256:01886eb9e0a87f0ec630652cf1fae65d2a8556378a609bc6cc07d2ea60c8d0dd"},
+]
+
+[package.extras]
+aiohttp = ["aiohttp"]
+fast-parse = ["fast-mail-parser"]
+nkeys = ["nkeys"]
+
+[[package]]
 name = "nodeenv"
 version = "1.9.1"
 description = "Node.js virtual environment builder"
@@ -2983,4 +2998,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "9eb7e1a8669fccddb37a8697fb4c8b5d3be79ef364eb46e85e882d3fd7d04725"
+content-hash = "f94cf74dbbfd7da7c7bdd3c27e7d9ede9ae11811bc414ba8cf61bcd62d673340"

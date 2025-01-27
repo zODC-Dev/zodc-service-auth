@@ -18,11 +18,29 @@ class RoleNotFoundError(RoleError):
         super().__init__(message)
 
 
+class RoleIsSystemRoleError(RoleError):
+    """Raised when a role is a system role"""
+
+    def __init__(self, role_name: str):
+        super().__init__(
+            f"Role '{role_name}' is a system role and cannot be assigned to a project")
+
+
 class RoleAlreadyExistsError(RoleError):
     """Raised when attempting to create a role that already exists"""
 
     def __init__(self, role_name: str):
         super().__init__(f"Role with name '{role_name}' already exists")
+
+
+class RoleCreateError(RoleError):
+    """Raised when there's an error creating a role"""
+
+    def __init__(self, role_name: str, reason: str = None):
+        message = f"Cannot create role with name '{role_name}'"
+        if reason:
+            message += f": {reason}"
+        super().__init__(message)
 
 
 class RoleUpdateError(RoleError):

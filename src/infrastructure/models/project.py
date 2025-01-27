@@ -22,7 +22,7 @@ class Project(BaseModelWithTimestamps, table=True):
         link_model=UserProjectRole,
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "project_roles,user"
+            "overlaps": "project,user"
         }
     )
 

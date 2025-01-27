@@ -3,20 +3,16 @@ from typing import List
 from fastapi import APIRouter, Depends, Request
 
 from src.app.controllers.project_controller import ProjectController
-from src.app.decorators.auth_decorator import require_permissions
+from src.app.dependencies.auth import require_auth
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.project import ProjectCreateRequest, ProjectUpdateRequest
 from src.app.schemas.responses.project import ProjectResponse
+from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
 
 @router.post("/", response_model=ProjectResponse)
-@require_permissions(
-    system_roles=["user"],
-    # system_roles=["admin"],
-    # permissions=["projects.manage"]
-)
 async def create_project(
     request: Request,
     project_data: ProjectCreateRequest,
@@ -27,9 +23,6 @@ async def create_project(
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-@require_permissions(
-    system_roles=["user"],
-)
 async def get_project(
     request: Request,
     project_id: int,
@@ -40,17 +33,18 @@ async def get_project(
 
 
 @router.get("/", response_model=List[ProjectResponse])
-# @require_permissions(system_roles=["user"])
 async def get_all_projects(
     request: Request,
-    controller: ProjectController = Depends(get_project_controller)
+    controller: ProjectController = Depends(get_project_controller),
+    auth_data=require_auth(
+        system_roles=[SystemRoles.USER]
+    )
 ):
     """Get all projects."""
     return await controller.get_all_projects()
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
-@require_permissions(system_roles=["admin"])
 async def update_project(
     request: Request,
     project_id: int,
@@ -62,7 +56,6 @@ async def update_project(
 
 
 @router.delete("/{project_id}")
-@require_permissions(system_roles=["admin"])
 async def delete_project(
     request: Request,
     project_id: int,
@@ -74,7 +67,6 @@ async def delete_project(
 
 
 @router.get("/user/{user_id}", response_model=List[ProjectResponse])
-@require_permissions(system_roles=["user"])
 async def get_user_projects(
     request: Request,
     user_id: int,

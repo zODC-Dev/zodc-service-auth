@@ -2,13 +2,15 @@ import sys
 
 from loguru import logger
 
+from src.configs.settings import settings
+
 # Configure logger
 logger.remove()  # Remove the default handler
 logger.add(
     sys.stdout,
     colorize=True,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO",
+    level=settings.LOG_LEVEL,
 )
 logger.add(
     "logs/app.log",
@@ -16,7 +18,7 @@ logger.add(
     retention="10 days",
     compression="zip",
     format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-    level="DEBUG",
+    level="ERROR",
 )
 
 # Export the logger

@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from src.domain.constants.auth import TokenType
+from src.domain.entities.auth import CachedToken
 
 
 class IRedisService(ABC):
     @abstractmethod
-    async def get(self, key: str) -> Dict[str, Any]:
+    async def get(self, key: str) -> Optional[Any]:
         """Get a value from Redis by key."""
         pass
 
@@ -19,11 +22,16 @@ class IRedisService(ABC):
         pass
 
     @abstractmethod
-    async def cache_token(self, user_id: int, access_token: str, expiry: int):
+    async def cache_token(self, user_id: int, access_token: str, expiry: int, token_type: TokenType):
         """Cache microsoft access token with expiry."""
         pass
 
     @abstractmethod
-    async def get_cached_token(self, user_id: int) -> str:
+    async def get_cached_token(self, user_id: int, token_type: TokenType) -> Optional[CachedToken]:
         """Get microsoft access token from cache if exists and valid."""
+        pass
+
+    @abstractmethod
+    async def delete_cached_token(self, user_id: int, token_type: TokenType):
+        """Delete cached token from Redis."""
         pass
