@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -73,7 +73,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
                 user_id=user.id,
                 token=refresh_token,
                 token_type=token_type,
-                expires_at=datetime.now() + timedelta(days=30)
+                expires_at=(datetime.now() + timedelta(days=30)).astimezone(timezone.utc)
             )
             await self.session.add(new_refresh_token)  # type: ignore
             await self.session.commit()

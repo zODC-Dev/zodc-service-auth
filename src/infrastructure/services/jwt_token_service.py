@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import secrets
 from typing import Dict, List, Optional, cast
@@ -57,16 +57,15 @@ class JWTTokenService(ITokenService):
             system_permissions = await self.permission_repository.get_system_permissions_by_user_id(user.id)
             project_permissions = await self.permission_repository.get_permissions_of_all_projects_by_user_id(user.id)
 
-            # Create token payload with all authorization info
             # Build project permissions dict mapping project_id -> permission list
-            project_perms_dict: Dict[str, List[str]] = {}
+            project_perms_dict: Dict[int, List[str]] = {}
             for proj_perm in project_permissions:
-                project_perms_dict[str(proj_perm.project_name)] = [p.name for p in proj_perm.permissions]
+                project_perms_dict[proj_perm.project_id] = [p.name for p in proj_perm.permissions]
 
-            # Build project roles dict mapping project_name -> role name
-            project_roles_dict: Dict[str, str] = {}
+            # Build project roles dict mapping project_id -> role name
+            project_roles_dict: Dict[int, str] = {}
             for proj_role in project_roles:
-                project_roles_dict[str(proj_role.project_name)] = proj_role.role_name
+                project_roles_dict[proj_role.project_id] = proj_role.role_name
 
             token_payload = TokenPayload(
                 sub=str(user.id),
@@ -85,7 +84,7 @@ class JWTTokenService(ITokenService):
             # Create refresh token
             refresh_token = secrets.token_urlsafe(64)
             refresh_token_expires = timedelta(seconds=settings.REFRESH_TOKEN_EXPIRATION_TIME)
-            refresh_token_expires_at = datetime.now() + refresh_token_expires
+            refresh_token_expires_at = (datetime.now(timezone.utc) + refresh_token_expires)
 
             # Store refresh token
             await self.refresh_token_repository.create_refresh_token(
@@ -119,7 +118,7 @@ class JWTTokenService(ITokenService):
             # Check if token is expired or revoked
             if stored_token.is_revoked:
                 raise InvalidTokenError("Refresh token has been revoked")
-            if stored_token.expires_at < datetime.now():
+            if stored_token.expires_at < datetime.now(timezone.utc):
                 raise TokenExpiredError("Refresh token has expired")
 
             # Get user
@@ -252,8 +251,8 @@ class JWTTokenService(ITokenService):
 
         token_payload = {
             **payload.model_dump(),
-            "exp": expires_at,
-            "iat": datetime.now(),
+            "exp": expires_at.astimezone(timezone.utc),
+            "iat": datetime.now(timezone.utc),
             'iss': settings.JWT_ISSUER
         }
 

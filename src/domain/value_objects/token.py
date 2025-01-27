@@ -9,5 +9,5 @@ class TokenPayload(BaseModel):
     name: str
     system_role: str
     system_permissions: List[str]
-    project_roles: Dict[str, str]
-    project_permissions: Dict[str, List[str]]
+    project_roles: Dict[int, str]  # project_id -> role_name
+    project_permissions: Dict[int, List[str]]  # project_id -> permissions

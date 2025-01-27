@@ -97,7 +97,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
     def _to_domain_project_role(self, role: Role, project: Project) -> ProjectRole:
         return ProjectRole(
-            project_name=project.name,
+            project_id=project.id,
             role_name=role.name
         )
 

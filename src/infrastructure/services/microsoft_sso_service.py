@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, cast
 
 from aiohttp import ClientSession
@@ -115,8 +115,8 @@ class MicrosoftSSOService(IMicrosoftSSOService):
         """Generate secure state token for OAuth flow"""
         return cast(str, jwt.encode(
             {
-                "exp": datetime.now().timestamp() + 600,  # 10 minutes
-                "iat": datetime.now().timestamp()
+                "exp": datetime.now(timezone.utc).timestamp() + 600,  # 10 minutes
+                "iat": datetime.now(timezone.utc).timestamp()
             },
             key=self._private_key,
             algorithm=settings.JWT_ALGORITHM

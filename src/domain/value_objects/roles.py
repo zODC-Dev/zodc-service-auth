@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 
 class ProjectRole(BaseModel):
-    project_name: str
+    project_id: int
     role_name: str
 
 
