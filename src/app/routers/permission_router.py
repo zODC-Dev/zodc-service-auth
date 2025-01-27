@@ -10,7 +10,6 @@ router = APIRouter()
 
 
 @router.get("/", response_model=GroupedPermissionResponse)
-# @require_permissions(system_roles=["user"])
 async def get_permissions(
     request: Request,
     controller: PermissionController = Depends(get_permission_controller)

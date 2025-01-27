@@ -73,6 +73,7 @@ ignore = [
     "D101",  # missing docstring in public class
     "D106",  # missing docstring in nested class
     "D107",  # missing docstring in __init__
+    "B008",  # do not perform function calls in argument defaults, perform the call within the function
 ]
 
 [tool.ruff.lint.pydocstyle]

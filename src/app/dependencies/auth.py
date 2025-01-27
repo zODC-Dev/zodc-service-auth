@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict
+from functools import partial
+from typing import Annotated, Any, Callable, Dict, List, Optional, TypeVar
 
 from fastapi import Depends, HTTPException
 import jwt
@@ -9,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.app.background.token_refresh import TokenRefreshScheduler
 from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
+from src.app.middlewares.auth_middleware import JWTAuth
 from src.app.services.auth_service import AuthService
 from src.app.services.user_service import UserService
 from src.configs.auth import oauth2_scheme
@@ -30,6 +32,8 @@ from .common import (
     get_token_service,
 )
 from .user import get_user_service
+
+T = TypeVar('T', bound=Dict[str, Any])
 
 
 async def get_auth_repository(db: AsyncSession = Depends(get_db), role_repository=Depends(get_role_repository), refresh_token_repository=Depends(get_refresh_token_repository), user_repository=Depends(get_user_repository)) -> SQLAlchemyAuthRepository:
@@ -137,3 +141,33 @@ async def get_current_user(
 TokenPayload = Annotated[Dict[str, Any], Depends(verify_token)]
 CurrentUserId = Annotated[int, Depends(get_current_user_id)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_auth(
+    *,
+    system_roles: Optional[List[str]] = None,
+    project_roles: Optional[List[str]] = None,
+    permissions: Optional[List[str]] = None,
+    require_all: bool = False
+) -> Callable[[Any], Dict[str, Any]]:
+    """Factory function for creating auth dependencies"""
+    auth_dependency = JWTAuth(
+        required_system_roles=system_roles,
+        required_project_roles=project_roles,
+        required_permissions=permissions,
+        require_all_roles=require_all
+    )
+    return Depends(auth_dependency)  # type: ignore
+
+
+# Common auth patterns as class attributes
+require_admin = staticmethod(partial(require_auth, system_roles=["admin"]))
+require_user = staticmethod(partial(require_auth, system_roles=["user"]))
+require_project_admin = staticmethod(partial(require_auth, project_roles=["project_admin"]))
+require_project_management = staticmethod(
+    partial(
+        require_auth,
+        project_roles=["project_admin"],
+        require_all=True
+    )
+)
