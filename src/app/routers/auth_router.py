@@ -9,40 +9,10 @@ from src.app.schemas.requests.auth import (
     LoginEmailPasswordRequest,
     LoginJiraCallbackRequest,
     LoginJiraRequest,
-    LoginSSOCallbackRequest,
-    LoginSSORequest,
-    RefreshTokenRequest,
 )
 from src.app.schemas.responses.auth import LoginJiraSuccessResponse, LoginSuccessResponse, LoginUrlResponse
 
 router = APIRouter()
-
-
-@router.post("/login", response_model=LoginSuccessResponse)
-async def login_by_email_password(
-    request: LoginEmailPasswordRequest,
-    controller: AuthController = Depends(get_auth_controller)
-):
-    """Handle login by using email password"""
-    return await controller.login(request)
-
-
-@router.post("/microsoft", response_model=LoginUrlResponse)
-async def login_by_microsoft(
-    request: LoginSSORequest,
-    controller: AuthController = Depends(get_auth_controller)
-):
-    """Handle login by Microsoft SSO request"""
-    return await controller.login_by_microsoft(request)
-
-
-@router.post("/microsoft/callback", response_model=LoginSuccessResponse)
-async def microsoft_callback(
-    request: LoginSSOCallbackRequest,
-    controller: AuthController = Depends(get_auth_controller)
-):
-    """Handle Microsoft SSO callback"""
-    return await controller.handle_microsoft_callback(request)
 
 
 @router.post("/token", response_model=LoginSuccessResponse)
@@ -58,18 +28,10 @@ async def login(
     return await controller.login(request)
 
 
-@router.post("/refresh", response_model=LoginSuccessResponse)
-async def refresh_tokens(
-    request: RefreshTokenRequest,
-    controller: AuthController = Depends(get_auth_controller)
-):
-    """Refresh access token using refresh token"""
-    return await controller.refresh_tokens(request)
-
-
 @router.post("/jira", response_model=LoginUrlResponse)
 async def login_by_jira(
     request: LoginJiraRequest,
+    current_user: CurrentUser,
     controller: AuthController = Depends(get_auth_controller)
 ):
     """Handle login by Jira SSO request"""

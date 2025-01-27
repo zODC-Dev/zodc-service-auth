@@ -3,7 +3,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from src.app.controllers.role_controller import RoleController
-from src.app.decorators.auth_decorator import require_permissions
 from src.app.dependencies.role import get_role_controller
 from src.app.schemas.requests.role import (
     AssignProjectRoleRequest,
@@ -16,7 +15,6 @@ from src.app.schemas.responses.role import (
     PaginatedGetSystemRolesResponse,
     RoleResponse,
 )
-from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
@@ -26,7 +24,6 @@ router = APIRouter()
                  400: {"description": "Role already exists or invalid data"},
                  500: {"description": "Internal server error"}
              })
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def create_role(
     request: Request,
     role_data: RoleCreateRequest,
@@ -49,7 +46,6 @@ async def create_role(
             responses={
                 500: {"description": "Internal server error"}
             })
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def get_system_roles(
     request: Request,
     page: int = Query(1, ge=1),
@@ -87,7 +83,6 @@ async def get_system_roles(
 
 
 @router.get("/", response_model=List[RoleResponse])
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def get_roles(
     request: Request,
     include_deleted: bool = False,
@@ -111,7 +106,6 @@ async def get_roles(
                  400: {"description": "User or role not found"},
                  500: {"description": "Internal server error"}
              })
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def assign_system_role(
     request: Request,
     role_data: AssignSystemRoleRequest,
@@ -133,7 +127,6 @@ async def assign_system_role(
                 400: {"description": "Role not found"},
                 500: {"description": "Internal server error"}
             })
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def update_role(
     request: Request,
     role_id: int,
@@ -159,7 +152,6 @@ async def update_role(
                    400: {"description": "Role not found"},
                    500: {"description": "Internal server error"}
                })
-@require_permissions(system_roles=[SystemRoles.ADMIN])
 async def delete_role(
     request: Request,
     role_id: int,
@@ -174,7 +166,6 @@ async def delete_role(
                 404: {"description": "Project not found"},
                 500: {"description": "Internal server error"}
             })
-@require_permissions(system_roles=[SystemRoles.PRODUCT_OWNER, SystemRoles.ADMIN])
 async def get_project_roles(
     request: Request,
     project_id: int,
@@ -214,7 +205,6 @@ async def get_project_roles(
                  400: {"description": "Project not found or invalid role assignments or user not found"},
                  500: {"description": "Internal server error"}
              })
-@require_permissions(system_roles=[SystemRoles.PRODUCT_OWNER])
 async def assign_project_role(
     request: Request,
     project_id: int,

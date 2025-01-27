@@ -4,21 +4,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.app.controllers.role_controller import RoleController
 from src.app.services.role_service import RoleService
 from src.configs.database import get_db
-from src.infrastructure.repositories.sqlalchemy_permission_repository import SQLAlchemyPermissionRepository
 from src.infrastructure.repositories.sqlalchemy_project_repository import SQLAlchemyProjectRepository
-from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
 
-from .common import get_user_repository
-
-
-async def get_role_repository(db: AsyncSession = Depends(get_db)):
-    """Get dependencies for role_repository"""
-    return SQLAlchemyRoleRepository(db)
-
-
-async def get_permission_repository(db: AsyncSession = Depends(get_db)):
-    """Get dependencies for permission_repository"""
-    return SQLAlchemyPermissionRepository(db)
+from .common import get_permission_repository, get_role_repository, get_user_repository
 
 
 async def get_project_repository(db: AsyncSession = Depends(get_db)):

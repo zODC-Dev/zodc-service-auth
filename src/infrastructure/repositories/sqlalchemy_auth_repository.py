@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.configs.logger import log
 from src.domain.constants.auth import TokenType
 from src.domain.constants.roles import SystemRoles
 from src.domain.entities.auth import MicrosoftIdentity, UserCredentials
@@ -14,7 +15,7 @@ from src.domain.repositories.role_repository import IRoleRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.infrastructure.models.refresh_token import RefreshToken as RefreshTokenModel
 from src.infrastructure.models.user import User as UserModel
-from src.infrastructure.services.bcrypt_service import verify_password
+from src.infrastructure.services.bcrypt_service import BcryptService
 
 
 class SQLAlchemyAuthRepository(IAuthRepository):
@@ -28,14 +29,17 @@ class SQLAlchemyAuthRepository(IAuthRepository):
         self,
         credentials: UserCredentials
     ) -> Optional[UserEntity]:
-        user = await self.user_repository.get_user_by_email(credentials.email)
-        if not user:
-            return None
+        try:
+            user = await self.user_repository.get_user_with_password_by_email(credentials.email)
+            if not user:
+                return None
 
-        if not user.password or not verify_password(credentials.password, user.password):
+            if not user.password or not BcryptService.verify_password(credentials.password, user.password):
+                return None
+            return user
+        except Exception as e:
+            log.error(f"{str(e)}")
             return None
-
-        return user
 
     async def create_sso_user(self, microsoft_identity: MicrosoftIdentity) -> UserEntity:
         new_user = UserModel(
@@ -66,7 +70,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
                 user_id=user.id,
                 token=refresh_token,
                 token_type=token_type,
-                expires_at=datetime.now() + timedelta(days=30)
+                expires_at=(datetime.now() + timedelta(days=30)).astimezone(timezone.utc)
             )
             await self.session.add(new_refresh_token)  # type: ignore
             await self.session.commit()

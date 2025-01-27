@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from typing import Any, Dict, Optional
 
@@ -40,7 +40,7 @@ class RedisService(IRedisService):
     ) -> None:
         """Cache access token with expiry"""
         key = f"token:{token_type}:{user_id}"
-        expires_at = datetime.now().timestamp() + expiry  # Store as timestamp
+        expires_at = (datetime.now(timezone.utc).timestamp() + expiry)  # Store as timestamp
         token_data = {
             "access_token": access_token,
             "expires_at": expires_at,
@@ -56,7 +56,6 @@ class RedisService(IRedisService):
         """Get cached token if exists and valid"""
         key = f"token:{token_type}:{user_id}"
         token_dict: Optional[Dict[str, Any]] = await self.get(key)
-        log.info(f"Token dict: {token_dict}")
 
         if not token_dict:
             return None

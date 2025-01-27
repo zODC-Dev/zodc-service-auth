@@ -44,8 +44,8 @@ COPY --from=builder /app /app
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Create logs and secrets directories
+RUN mkdir -p /app/logs /app/secrets
 
 # Set working directory
 WORKDIR /app

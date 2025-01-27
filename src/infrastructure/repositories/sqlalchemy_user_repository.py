@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
 from src.domain.constants.user_events import UserEventType
-from src.domain.entities.user import User as UserEntity, UserUpdate
+from src.domain.entities.user import User as UserEntity, UserUpdate, UserWithPassword
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.user_event_service import IUserEventService
 from src.infrastructure.models.user import User as UserModel, UserCreate
@@ -45,6 +45,17 @@ class SQLAlchemyUserRepository(IUserRepository):
             )
             user = result.first()
             return self._to_domain(user) if user else None
+        except Exception as e:
+            log.error(f"{str(e)}")
+            return None
+
+    async def get_user_with_password_by_email(self, email: str) -> Optional[UserWithPassword]:
+        try:
+            result = await self.session.exec(
+                select(UserModel).where(UserModel.email == email)
+            )
+            user = result.first()
+            return self._to_domain_with_password(user) if user else None
         except Exception as e:
             log.error(f"{str(e)}")
             return None
@@ -88,4 +99,13 @@ class SQLAlchemyUserRepository(IUserRepository):
             is_active=db_user.is_active,
             created_at=db_user.created_at,
             system_role=db_user.system_role
+        )
+
+    def _to_domain_with_password(self, db_user: UserModel) -> UserWithPassword:
+        return UserWithPassword(
+            id=db_user.id,
+            email=db_user.email,
+            name=db_user.name,
+            is_active=db_user.is_active,
+            password=db_user.password
         )

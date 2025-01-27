@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from aiohttp import ClientSession
@@ -43,7 +43,7 @@ class TokenRefreshService(ITokenRefreshService):
                         "client_id": settings.CLIENT_AZURE_CLIENT_ID,
                         "refresh_token": refresh_token.token,
                         "grant_type": "refresh_token",
-                        "scope": "User.Read email profile offline_access"
+                        "scope": "User.Read email profile offline_access openid"
                     }
                 )
                 data: Dict[str, str] = await response.json()
@@ -102,7 +102,7 @@ class TokenRefreshService(ITokenRefreshService):
         if not user:
             return
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         refresh_threshold = timedelta(minutes=5)
 
         # Check Microsoft token
@@ -129,7 +129,7 @@ class TokenRefreshService(ITokenRefreshService):
                 token=token_data["refresh_token"],
                 user_id=user_id,
                 token_type=TokenType.MICROSOFT,
-                expires_at=datetime.now() + timedelta(days=30)  # Adjust expiry as needed
+                expires_at=(datetime.now() + timedelta(days=30)).astimezone(timezone.utc)  # Adjust expiry as needed
             )
             await self.refresh_token_repository.create_refresh_token(refresh_token)
 
@@ -149,7 +149,7 @@ class TokenRefreshService(ITokenRefreshService):
                 token=token_data["refresh_token"],
                 user_id=user_id,
                 token_type=TokenType.JIRA,
-                expires_at=datetime.now() + timedelta(days=30)  # Adjust expiry as needed
+                expires_at=(datetime.now() + timedelta(days=30)).astimezone(timezone.utc)  # Adjust expiry as needed
             )
             await self.refresh_token_repository.create_refresh_token(refresh_token)
 

@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from sqlmodel import asc, delete, desc, func, or_, select
+from sqlmodel import asc, col, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.permission import Permission as PermissionEntity
@@ -20,6 +20,7 @@ from src.domain.exceptions.role_exceptions import (
 )
 from src.domain.exceptions.user_exceptions import UserNotFoundError
 from src.domain.repositories.role_repository import IRoleRepository
+from src.domain.value_objects.roles import ProjectRole, SystemRole
 from src.infrastructure.models.permission import Permission
 from src.infrastructure.models.project import Project
 from src.infrastructure.models.role import Role
@@ -92,6 +93,12 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             description=project.description,
             created_at=project.created_at,
             updated_at=project.updated_at
+        )
+
+    def _to_domain_project_role(self, role: Role, project: Project) -> ProjectRole:
+        return ProjectRole(
+            project_id=project.id,
+            role_name=role.name
         )
 
     async def get_role_by_name(self, name: str) -> Optional[RoleEntity]:
@@ -175,21 +182,23 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
         await self.session.commit()
 
-    async def get_user_system_role(self, user_id: int) -> Optional[RoleEntity]:
+    async def get_system_role_by_user_id(self, user_id: int) -> Optional[SystemRole]:
         result = await self.session.exec(
             select(Role)
             .join(User)
             .where(User.id == user_id)
         )
         role = result.first()
-        return self._to_domain(role) if role else None
+        return SystemRole(role_name=role.name) if role else None
 
-    async def get_user_project_roles(
+    async def get_project_roles_by_user_id(
         self,
         user_id: int,
         project_id: Optional[int] = None
-    ) -> List[RoleEntity]:
-        query = select(Role).join(UserProjectRole)
+    ) -> List[ProjectRole]:
+        query = select(Role, Project)\
+            .join(UserProjectRole, col(Role.id) == UserProjectRole.role_id)\
+            .join(Project, col(Project.id) == UserProjectRole.project_id)
 
         if project_id:
             query = query.where(
@@ -201,7 +210,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
         result = await self.session.exec(query)
         roles = result.all()
-        return [self._to_domain(r) for r in roles]
+        return [self._to_domain_project_role(r[0], r[1]) for r in roles]
 
     async def get_all_roles(self, include_deleted: bool = False) -> List[RoleEntity]:
         query = select(Role)

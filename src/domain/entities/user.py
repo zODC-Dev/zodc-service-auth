@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 class User(BaseEntity):
     id: Optional[int] = None
     email: EmailStr
-    password: Optional[str] = None
     name: Optional[str] = None
     is_active: bool = True
     microsoft_id: Optional[str] = None
@@ -45,3 +44,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
     jira_account_id: Optional[str] = None
+
+
+class UserWithPassword(User):
+    password: str

@@ -4,10 +4,9 @@ on:
   push:
     branches:
       - main
-      - dev
 env:
   SERVICE_NAME: zodc-service-auth
-  VERSION: 0.1.0
+  VERSION: 0.1.1
   REGISTRY_PROJECT: zodc
 
 jobs:

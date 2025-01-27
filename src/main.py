@@ -5,14 +5,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.app.routers.auth_router import router as auth_router
-from src.app.routers.calendar_router import router as calendar_router
 from src.app.routers.internal_router import router as internal_router
 from src.app.routers.permission_router import router as permission_router
 from src.app.routers.project_router import router as project_router
+from src.app.routers.public_auth_router import router as public_auth_router
 from src.app.routers.role_router import router as role_router
-from src.app.routers.task_router import router as task_router
 from src.app.routers.user_router import router as user_router
-from src.app.routers.util_router import router as util_router
 from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
@@ -43,11 +41,8 @@ app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
     lifespan=lifespan,
-    swagger_ui_init_oauth={
-        "usePkceWithAuthorizationCodeGrant": True,
-        "clientId": settings.CLIENT_AZURE_CLIENT_ID,
-        "appName": settings.APP_NAME,
-    },
+    docs_url="/docs",
+    openapi_url="/openapi.json",
 )
 
 if settings.BACKEND_CORS_ORIGINS:
@@ -60,14 +55,20 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-app.include_router(task_router, prefix=settings.API_V1_STR +
-                   "/tasks", tags=["tasks"])
-app.include_router(auth_router, prefix=settings.API_V1_STR +
-                   "/auth", tags=["authentication"])
-app.include_router(calendar_router, prefix=settings.API_V1_STR +
-                   "/calendars", tags=["calendars"])
-app.include_router(util_router, prefix=settings.API_V1_STR +
-                   "/utils", tags=["utils"])
+# Public routes (no auth required)
+app.include_router(
+    public_auth_router,
+    prefix=settings.API_V1_STR + "/public",
+    tags=["authentication"]
+)
+
+# Protected routes (auth required)
+app.include_router(
+    auth_router,
+    prefix=settings.API_V1_STR + "/auth",
+    tags=["authentication"]
+)
+
 app.include_router(user_router, prefix=settings.API_V1_STR +
                    "/users", tags=["users"])
 app.include_router(role_router, prefix=settings.API_V1_STR +

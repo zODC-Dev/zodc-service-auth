@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import BackgroundTasks
 
@@ -25,7 +25,7 @@ class BackgroundTokenRefresh:
         if not user:
             return
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         refresh_threshold = timedelta(minutes=5)
 
         # Check and refresh Microsoft token
