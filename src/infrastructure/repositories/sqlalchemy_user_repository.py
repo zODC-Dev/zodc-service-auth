@@ -55,7 +55,6 @@ class SQLAlchemyUserRepository(IUserRepository):
                 select(UserModel).where(UserModel.email == email)
             )
             user = result.first()
-            log.info(f"User: {user}")
             return self._to_domain_with_password(user) if user else None
         except Exception as e:
             log.error(f"{str(e)}")

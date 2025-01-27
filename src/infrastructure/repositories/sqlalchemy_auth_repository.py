@@ -30,15 +30,12 @@ class SQLAlchemyAuthRepository(IAuthRepository):
         credentials: UserCredentials
     ) -> Optional[UserEntity]:
         try:
-            log.info(f"Credentials: {credentials}")
             user = await self.user_repository.get_user_with_password_by_email(credentials.email)
-            log.info(f"User: {user}")
             if not user:
                 return None
 
             if not user.password or not BcryptService.verify_password(credentials.password, user.password):
                 return None
-            log.info(f"User verified: {user}")
             return user
         except Exception as e:
             log.error(f"{str(e)}")
