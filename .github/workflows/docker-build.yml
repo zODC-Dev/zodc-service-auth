@@ -4,10 +4,9 @@ on:
   push:
     branches:
       - main
-      - dev
 env:
   SERVICE_NAME: zodc-service-auth
-  VERSION: 0.1.0
+  VERSION: 0.1.1
   REGISTRY_PROJECT: zodc
 
 jobs:
@@ -17,6 +16,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up secrets directory
+        run: |
+          mkdir -p secrets
+          echo "${{ secrets.JWT_PRIVATE_KEY }}" | base64 -d > secrets/jwt-private.pem
+          echo "${{ secrets.JWT_PUBLIC_KEY }}" | base64 -d > secrets/jwt-public.pem
+          chmod 600 secrets/jwt-private.pem secrets/jwt-public.pem
 
       - name: Build Image
         run: |
