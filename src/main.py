@@ -8,6 +8,7 @@ from src.app.routers.auth_router import router as auth_router
 from src.app.routers.internal_router import router as internal_router
 from src.app.routers.permission_router import router as permission_router
 from src.app.routers.project_router import router as project_router
+from src.app.routers.public_auth_router import router as public_auth_router
 from src.app.routers.role_router import router as role_router
 from src.app.routers.user_router import router as user_router
 from src.configs.database import init_db
@@ -47,16 +48,27 @@ app = FastAPI(
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
-        # allow_origins=[str(origin)
-        #                for origin in settings.BACKEND_CORS_ORIGINS],
-        allow_origins=["*"],
+        allow_origins=[str(origin)
+                       for origin in settings.BACKEND_CORS_ORIGINS],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-app.include_router(auth_router, prefix=settings.API_V1_STR +
-                   "/auth", tags=["authentication"])
+# Public routes (no auth required)
+app.include_router(
+    public_auth_router,
+    prefix=settings.API_V1_STR + "/public",
+    tags=["authentication"]
+)
+
+# Protected routes (auth required)
+app.include_router(
+    auth_router,
+    prefix=settings.API_V1_STR + "/auth",
+    tags=["authentication"]
+)
+
 app.include_router(user_router, prefix=settings.API_V1_STR +
                    "/users", tags=["users"])
 app.include_router(role_router, prefix=settings.API_V1_STR +
