@@ -65,7 +65,7 @@ app.include_router(
 # Protected routes (auth required)
 app.include_router(
     auth_router,
-    prefix=settings.API_V1_STR + "/auth",
+    prefix=settings.API_V1_STR + "/private",
     tags=["authentication"]
 )
 
