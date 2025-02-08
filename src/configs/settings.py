@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+    ENABLE_METRICS: bool = True
 
     # Port
     PORT: int = 8000

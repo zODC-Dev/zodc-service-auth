@@ -6,9 +6,8 @@ on:
       - main
 env:
   SERVICE_NAME: zodc-service-auth
-  VERSION: 0.1.1
+  VERSION: 0.1.2
   REGISTRY_PROJECT: zodc
-
 
 jobs:
   build-and-push:

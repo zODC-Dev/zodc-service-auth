@@ -28,6 +28,7 @@ celery = "^5.4.0"
 openpyxl = "^3.1.5"
 python-multipart = "^0.0.20"
 nats-py = "^2.9.0"
+prometheus-fastapi-instrumentator = "^7.0.2"
 
 
 [tool.poetry.group.dev.dependencies]

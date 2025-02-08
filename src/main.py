@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.internal_router import router as internal_router
@@ -15,6 +16,18 @@ from src.configs.database import init_db
 from src.configs.logger import log
 from src.configs.settings import settings
 from src.infrastructure.services.nats_service import NATSService
+
+# Define Prometheus instrumentator first
+instrumentator = Instrumentator(
+    should_respect_env_var=True,
+    env_var_name="ENABLE_METRICS",
+    # Add these configurations
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=[".*admin.*", "/metrics"],
+    # env_var_name="ENABLE_METRICS",
+    inprogress_name="fastapi_inprogress",
+    inprogress_labels=True
+)
 
 
 @asynccontextmanager
@@ -29,13 +42,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await nats_service.connect()
     app.state.nats = nats_service
 
-    yield  # This is where the FastAPI app runs
+    # Initialize Prometheus - REMOVE THIS FROM HERE
+    # instrumentator.instrument(app).expose(app, include_in_schema=False)
+
+    yield
 
     # Shutdown
     log.info(f"Shutting down {settings.APP_NAME}")
     if hasattr(app.state, "nats"):
         await app.state.nats.disconnect()
-
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -44,6 +59,9 @@ app = FastAPI(
     docs_url="/docs",
     openapi_url="/openapi.json",
 )
+
+# Add Prometheus instrumentation AFTER FastAPI app creation
+instrumentator.instrument(app).expose(app, include_in_schema=True)
 
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
