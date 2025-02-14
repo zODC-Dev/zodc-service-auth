@@ -10,7 +10,6 @@ from src.configs.settings import settings
 from sqlmodel import SQLModel
 
 # Add all models need to be created in database
-from src.infrastructure.models.task import Task
 from src.infrastructure.models.user import User
 from src.infrastructure.models.role import Role
 from src.infrastructure.models.permission import Permission

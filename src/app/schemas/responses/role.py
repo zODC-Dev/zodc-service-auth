@@ -1,14 +1,13 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
-
+from src.app.schemas.responses.base import BaseResponse
 from src.app.schemas.responses.common import PaginatedResponse
 from src.domain.entities.role import Role
 from src.domain.entities.user_project_role import UserProjectRole
 
 
-class RoleResponse(BaseModel):
+class RoleResponse(BaseResponse):
     id: int
     name: str
     description: Optional[str]
@@ -33,7 +32,7 @@ class RoleResponse(BaseModel):
         )
 
 
-class GetProjectRoleResponse(BaseModel):
+class GetProjectRoleResponse(BaseResponse):
     user_id: int
     user_name: str
     user_email: str
@@ -56,7 +55,7 @@ class PaginatedGetProjectRolesResponse(PaginatedResponse[GetProjectRoleResponse]
     pass
 
 
-class GetSystemRoleResponse(BaseModel):
+class GetSystemRoleResponse(BaseResponse):
     id: int
     name: str
     description: Optional[str]

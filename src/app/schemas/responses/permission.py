@@ -1,14 +1,13 @@
 from typing import List, Optional, Set
 
-from pydantic import BaseModel
-
+from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.permission import (
     Permission,
     PermissionVerificationResult as DomainPermissionVerificationResult,
 )
 
 
-class PermissionResponse(BaseModel):
+class PermissionResponse(BaseResponse):
     id: Optional[int] = None
     name: str
     description: Optional[str] = None
@@ -24,7 +23,7 @@ class PermissionResponse(BaseModel):
         )
 
 
-class GroupedPermissionResponse(BaseModel):
+class GroupedPermissionResponse(BaseResponse):
     groups: Set[str]
     permissions: List[PermissionResponse]
 
@@ -38,7 +37,7 @@ class GroupedPermissionResponse(BaseModel):
         )
 
 
-class PermissionVerificationResponse(BaseModel):
+class PermissionVerificationResponse(BaseResponse):
     allowed: bool
     user_id: int
     permissions: List[str]

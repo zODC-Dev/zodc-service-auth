@@ -11,7 +11,16 @@ from src.domain.services.jira_sso_service import IJiraSSOService
 
 class JiraSSOService(IJiraSSOService):
     TOKEN_ENDPOINT = "https://auth.atlassian.com/oauth/token"
-    SCOPE = "read:jira-user read:jira-work write:jira-work offline_access"
+    SCOPE = [
+        "read:jira-user",
+        "read:jira-work",
+        "write:jira-work",
+        "offline_access",
+        "read:sprint:jira-software",
+        "write:sprint:jira-software",
+        "read:board-scope:jira-software",
+        "read:project:jira"
+    ]
 
     async def generate_jira_auth_url(self) -> str:
         """Generate Jira SSO authentication URL"""
@@ -21,7 +30,7 @@ class JiraSSOService(IJiraSSOService):
                 f"?client_id={settings.JIRA_CLIENT_ID}"
                 f"&response_type=code"
                 f"&redirect_uri={settings.JIRA_REDIRECT_URI}"
-                f"&scope={self.SCOPE}"
+                f"&scope={' '.join(self.SCOPE)}"
                 "&prompt=consent"
             )
             return auth_url
