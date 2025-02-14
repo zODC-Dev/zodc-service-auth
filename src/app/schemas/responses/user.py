@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
-
+from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user import User
 
 
-class UserResponse(BaseModel):
+class UserResponse(BaseResponse):
     id: int
     email: str
     name: Optional[str]

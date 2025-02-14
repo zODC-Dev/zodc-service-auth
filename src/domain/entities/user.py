@@ -17,6 +17,7 @@ class User(BaseEntity):
     is_active: bool = True
     microsoft_id: Optional[str] = None
     jira_account_id: Optional[str] = None
+    is_jira_linked: bool = False
 
     user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
@@ -24,6 +25,7 @@ class User(BaseEntity):
     jira_token: Optional[str] = None
     jira_refresh_token: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
 
     # Microsoft tokens
     microsoft_access_token: Optional[str] = None

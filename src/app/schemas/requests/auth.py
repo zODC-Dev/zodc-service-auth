@@ -2,27 +2,29 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
+from src.app.schemas.requests.base import BaseRequest
 
-class LoginEmailPasswordRequest(BaseModel):
+
+class LoginEmailPasswordRequest(BaseRequest):
     email: EmailStr
     password: str
 
 
-class LoginSSORequest(BaseModel):
+class LoginSSORequest(BaseRequest):
     code_challenge: str
 
 
-class LoginSSOCallbackRequest(BaseModel):
+class LoginSSOCallbackRequest(BaseRequest):
     code: str
     state: str
     code_verifier: str
 
 
-class LoginJiraRequest(BaseModel):
+class LoginJiraRequest(BaseRequest):
     pass
 
 
-class LoginJiraCallbackRequest(BaseModel):
+class LoginJiraCallbackRequest(BaseRequest):
     code: str
 
 
@@ -35,5 +37,5 @@ class TokenVerificationRequest(BaseModel):
     require_all_roles: bool = False
 
 
-class RefreshTokenRequest(BaseModel):
+class RefreshTokenRequest(BaseRequest):
     refresh_token: str

@@ -1,9 +1,9 @@
-from pydantic import BaseModel
 
+from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.project import Project
 
 
-class ProjectResponse(BaseModel):
+class ProjectResponse(BaseResponse):
     id: int
     name: str
     key: str
