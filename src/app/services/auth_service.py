@@ -135,11 +135,12 @@ class AuthService:
             # Extract Jira account ID from access token
             jira_account_id = await self._extract_jira_account_id(jira_info.access_token)
 
-            # Update user with Jira account ID
+            # Update user with Jira account ID and linked status
             await self.user_repository.update_user_by_id(
                 user.id,
                 UserUpdate(
-                    jira_account_id=jira_account_id
+                    jira_account_id=jira_account_id,
+                    is_jira_linked=True
                 )
             )
 
