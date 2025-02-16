@@ -10,7 +10,12 @@ from src.app.schemas.requests.auth import (
     LoginJiraCallbackRequest,
     LoginJiraRequest,
 )
-from src.app.schemas.responses.auth import LoginJiraSuccessResponse, LoginSuccessResponse, LoginUrlResponse
+from src.app.schemas.responses.auth import (
+    LoginJiraSuccessResponse,
+    LoginSuccessResponse,
+    LoginUrlResponse,
+    LogoutResponse,
+)
 
 router = APIRouter()
 
@@ -46,3 +51,12 @@ async def jira_callback(
 ):
     """Handle Jira SSO callback"""
     return await controller.handle_jira_callback(request, current_user)
+
+
+@router.post("/logout", response_model=LogoutResponse)
+async def logout(
+    current_user: CurrentUser,
+    controller: AuthController = Depends(get_auth_controller)
+):
+    """Handle user logout"""
+    return await controller.logout(current_user)

@@ -9,7 +9,12 @@ from src.app.schemas.requests.auth import (
     LoginSSORequest,
     RefreshTokenRequest,
 )
-from src.app.schemas.responses.auth import LoginJiraSuccessResponse, LoginSuccessResponse, LoginUrlResponse
+from src.app.schemas.responses.auth import (
+    LoginJiraSuccessResponse,
+    LoginSuccessResponse,
+    LoginUrlResponse,
+    LogoutResponse,
+)
 from src.app.services.auth_service import AuthService
 from src.configs.logger import log
 from src.domain.entities.auth import SSOCredentials, UserCredentials
@@ -168,4 +173,21 @@ class AuthController:
             raise HTTPException(
                 status_code=500,
                 detail="Failed to initiate Jira login"
+            ) from e
+
+    async def logout(self, current_user: User) -> LogoutResponse:
+        """Handle user logout"""
+        try:
+            if current_user.id is None:
+                raise HTTPException(status_code=401, detail="Invalid user")
+
+            await self.auth_service.logout(current_user.id)
+            return LogoutResponse(status="success", message="Successfully logged out")
+        except AuthenticationError as e:
+            raise HTTPException(status_code=401, detail=str(e)) from e
+        except Exception as e:
+            log.error(f"Logout failed: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Logout failed"
             ) from e

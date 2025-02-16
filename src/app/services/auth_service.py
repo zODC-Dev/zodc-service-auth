@@ -4,9 +4,11 @@ import json
 
 from src.configs.logger import log
 from src.domain.constants.auth import TokenType
+from src.domain.constants.user_events import UserEventType
 from src.domain.entities.auth import RefreshTokenEntity, SSOCredentials, TokenPair, UserCredentials
 from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
+    AuthenticationError,
     InvalidCredentialsError,
     UserNotFoundError,
 )
@@ -19,6 +21,7 @@ from src.domain.services.microsoft_sso_service import IMicrosoftSSOService
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.token_service import ITokenService
+from src.domain.services.user_event_service import IUserEventService
 
 
 class AuthService:
@@ -31,7 +34,8 @@ class AuthService:
         jira_sso_service: IJiraSSOService,
         redis_service: IRedisService,
         refresh_token_repository: IRefreshTokenRepository,
-        token_refresh_service: ITokenRefreshService
+        token_refresh_service: ITokenRefreshService,
+        user_event_service: IUserEventService
     ):
         self.auth_repository = auth_repository
         self.token_service = token_service
@@ -41,6 +45,7 @@ class AuthService:
         self.redis_service = redis_service
         self.refresh_token_repository = refresh_token_repository
         self.token_refresh_service = token_refresh_service
+        self.user_event_service = user_event_service
 
     async def login(self, credentials: UserCredentials) -> TokenPair:
         """Handle email/password login"""
@@ -204,3 +209,45 @@ class AuthService:
         except Exception as e:
             log.error(f"Error extracting Jira account ID: {e}")
             raise ValueError("Failed to extract Jira account ID from token") from e
+
+    async def logout(self, user_id: int) -> None:
+        """Handle user logout"""
+        try:
+            # Revoke all refresh tokens for the user
+            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
+                user_id=user_id,
+                token_type=TokenType.MICROSOFT
+            )
+
+            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
+                user_id=user_id,
+                token_type=TokenType.APP
+            )
+
+            # Clear cached Microsoft token
+            await self.redis_service.delete_cached_token(
+                user_id=user_id,
+                token_type=TokenType.MICROSOFT
+            )
+
+            # Clear cached Jira token
+            await self.redis_service.delete_cached_token(
+                user_id=user_id,
+                token_type=TokenType.JIRA
+            )
+
+            # Clear user cache
+            await self.redis_service.delete(f"user:{user_id}")
+
+            # Clear permission cache
+            await self.redis_service.delete(f"permissions:user:{user_id}")
+
+            # Send logout event
+            await self.user_event_service.publish_user_event(
+                user_id=user_id,
+                event_type=UserEventType.USER_LOGOUT
+            )
+
+        except Exception as e:
+            log.error(f"Error during logout: {e}")
+            raise AuthenticationError("Logout failed") from e

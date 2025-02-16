@@ -30,6 +30,7 @@ from .common import (
     get_role_repository,
     get_token_refresh_service,
     get_token_service,
+    get_user_event_service,
 )
 from .user import get_user_service
 
@@ -59,7 +60,8 @@ async def get_auth_service(
     user_repository=Depends(get_user_repository),
     redis_service=Depends(get_redis_service),
     refresh_token_repository=Depends(get_refresh_token_repository),
-    token_refresh_service=Depends(get_token_refresh_service)
+    token_refresh_service=Depends(get_token_refresh_service),
+    user_event_service=Depends(get_user_event_service)
 ):
     """Dependency for auth service"""
     return AuthService(
@@ -70,7 +72,8 @@ async def get_auth_service(
         user_repository=user_repository,
         redis_service=redis_service,
         refresh_token_repository=refresh_token_repository,
-        token_refresh_service=token_refresh_service
+        token_refresh_service=token_refresh_service,
+        user_event_service=user_event_service
     )
 
 
