@@ -10,6 +10,7 @@ from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
     AuthenticationError,
     InvalidCredentialsError,
+    TokenError,
     UserNotFoundError,
 )
 from src.domain.exceptions.user_exceptions import UserCreationError
@@ -126,7 +127,18 @@ class AuthService:
 
     async def refresh_tokens(self, refresh_token: str) -> TokenPair:
         """Handle token refresh"""
-        return await self.token_service.refresh_tokens(refresh_token)
+        try:
+            return await self.token_service.refresh_tokens(refresh_token)
+        except TokenError as e:
+            # If refresh token is invalid, perform logout
+            try:
+                # Extract user ID from the invalid refresh token
+                token_data = await self.refresh_token_repository.get_by_token(refresh_token)
+                if token_data and token_data.user_id:
+                    await self.logout(token_data.user_id)
+            except Exception as logout_error:
+                log.error(f"Error during auto-logout: {logout_error}")
+            raise e
 
     async def handle_jira_callback(self, code: str, user: User) -> TokenPair:
         """Handle Jira SSO callback"""

@@ -103,7 +103,13 @@ class AuthController:
                 expires_in=token_pair.expires_in
             )
         except TokenError as e:
-            raise HTTPException(status_code=401, detail=str(e)) from e
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "SESSION_EXPIRED",
+                    "message": "Your session has expired. Please login again."
+                }
+            ) from e
 
     async def handle_microsoft_callback(
         self,
