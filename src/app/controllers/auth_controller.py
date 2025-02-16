@@ -1,4 +1,3 @@
-
 from fastapi import HTTPException
 
 from src.app.background.token_refresh import TokenRefreshScheduler
@@ -136,21 +135,17 @@ class AuthController:
     ) -> LoginJiraSuccessResponse:
         """Handle Jira SSO callback"""
         try:
-            status = await self.auth_service.handle_jira_callback(
+            token_pair = await self.auth_service.handle_jira_callback(
                 request.code,
                 current_user
             )
 
-            if status == "success":
-                return LoginJiraSuccessResponse(
-                    status="success",
-                    message="Jira authentication successful"
-                )
-            else:
-                raise HTTPException(
-                    status_code=401,
-                    detail="Jira authentication failed"
-                )
+            return LoginJiraSuccessResponse(
+                access_token=token_pair.access_token,
+                refresh_token=token_pair.refresh_token,
+                token_type=token_pair.token_type,
+                expires_in=token_pair.expires_in
+            )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
         except Exception as e:
