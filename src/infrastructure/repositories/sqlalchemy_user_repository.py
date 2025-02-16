@@ -8,6 +8,7 @@ from src.configs.logger import log
 from src.domain.constants.user_events import UserEventType
 from src.domain.entities.user import User as UserEntity, UserUpdate, UserWithPassword
 from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.redis_service import IRedisService
 from src.domain.services.user_event_service import IUserEventService
 from src.infrastructure.models.user import User as UserModel, UserCreate
 
@@ -16,10 +17,12 @@ class SQLAlchemyUserRepository(IUserRepository):
     def __init__(
         self,
         session: AsyncSession,
-        user_event_service: IUserEventService
+        user_event_service: IUserEventService,
+        redis_service: IRedisService
     ):
         self.session = session
         self.user_event_service = user_event_service
+        self.redis_service = redis_service
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
         result = await self.session.exec(
@@ -89,6 +92,9 @@ class SQLAlchemyUserRepository(IUserRepository):
                 user_id=user_id,
                 event_type=event_type
             )
+
+        # clear cache in redis with key user:{user_id}
+        await self.redis_service.delete(f"user:{user_id}")
 
     def _to_domain(self, db_user: UserModel) -> UserEntity:
         """Convert DB model to domain entity"""

@@ -4,6 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.database import get_db
 from src.configs.redis import get_redis_client
+from src.domain.services.redis_service import IRedisService
 from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.user_event_service import IUserEventService
 from src.infrastructure.repositories.sqlalchemy_permission_repository import SQLAlchemyPermissionRepository
@@ -43,20 +44,22 @@ async def get_refresh_token_repository(
     return SQLAlchemyRefreshTokenRepository(session=db)
 
 
+async def get_redis_service(redis_client: Redis = Depends(get_redis_client)):
+    """Dependency for redis repository"""
+    return RedisService(redis_client=redis_client)
+
+
 async def get_user_repository(
     db: AsyncSession = Depends(get_db),
-    user_event_service: IUserEventService = Depends(get_user_event_service)
+    user_event_service: IUserEventService = Depends(get_user_event_service),
+    redis_service: IRedisService = Depends(get_redis_service)
 ) -> SQLAlchemyUserRepository:
     """Dependency for user repository"""
     return SQLAlchemyUserRepository(
         session=db,
-        user_event_service=user_event_service
+        user_event_service=user_event_service,
+        redis_service=redis_service
     )
-
-
-async def get_redis_service(redis_client: Redis = Depends(get_redis_client)):
-    """Dependency for redis repository"""
-    return RedisService(redis_client=redis_client)
 
 
 async def get_role_repository(db: AsyncSession = Depends(get_db)) -> SQLAlchemyRoleRepository:
