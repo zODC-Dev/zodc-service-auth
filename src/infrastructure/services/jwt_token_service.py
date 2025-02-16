@@ -74,7 +74,8 @@ class JWTTokenService(ITokenService):
                 system_role=system_role.role_name if system_role else "",
                 system_permissions=[p.name for p in system_permissions.permissions],
                 project_roles=project_roles_dict,
-                project_permissions=project_perms_dict
+                project_permissions=project_perms_dict,
+                is_jira_linked=user.is_jira_linked
             )
 
             # Create access token

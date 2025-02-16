@@ -46,6 +46,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
     jira_account_id: Optional[str] = None
+    is_jira_linked: Optional[bool] = None
 
 
 class UserWithPassword(User):

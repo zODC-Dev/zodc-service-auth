@@ -1,5 +1,3 @@
-
-
 from src.app.schemas.responses.base import BaseResponse
 
 
@@ -15,5 +13,7 @@ class LoginUrlResponse(BaseResponse):
 
 
 class LoginJiraSuccessResponse(BaseResponse):
-    status: str
-    message: str
+    access_token: str
+    refresh_token: str
+    token_type: str = 'bearer'
+    expires_in: int

@@ -123,7 +123,7 @@ class AuthService:
         """Handle token refresh"""
         return await self.token_service.refresh_tokens(refresh_token)
 
-    async def handle_jira_callback(self, code: str, user: User) -> str:
+    async def handle_jira_callback(self, code: str, user: User) -> TokenPair:
         """Handle Jira SSO callback"""
         try:
             # Get Jira tokens
@@ -171,7 +171,14 @@ class AuthService:
             # Schedule token refresh
             await self.token_refresh_service.schedule_token_refresh(user.id)
 
-            return "success"
+            # Get updated user to generate new tokens
+            updated_user = await self.user_repository.get_user_by_id(user.id)
+            if not updated_user:
+                raise UserNotFoundError("User not found after update")
+
+            # Generate new token pair with updated is_jira_linked status
+            return await self.token_service.create_token_pair(updated_user)
+
         except Exception as e:
             log.error(f"Error handling Jira callback: {e}")
             raise e

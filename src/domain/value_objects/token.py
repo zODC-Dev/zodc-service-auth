@@ -11,3 +11,4 @@ class TokenPayload(BaseModel):
     system_permissions: List[str]
     project_roles: Dict[int, str]  # project_id -> role_name
     project_permissions: Dict[int, List[str]]  # project_id -> permissions
+    is_jira_linked: bool
