@@ -98,7 +98,8 @@ class SQLAlchemyUserRepository(IUserRepository):
             name=db_user.name,
             is_active=db_user.is_active,
             created_at=db_user.created_at,
-            system_role=db_user.system_role
+            system_role=db_user.system_role,
+            is_jira_linked=db_user.is_jira_linked
         )
 
     def _to_domain_with_password(self, db_user: UserModel) -> UserWithPassword:
@@ -107,5 +108,6 @@ class SQLAlchemyUserRepository(IUserRepository):
             email=db_user.email,
             name=db_user.name,
             is_active=db_user.is_active,
-            password=db_user.password
+            password=db_user.password,
+            is_jira_linked=db_user.is_jira_linked
         )
