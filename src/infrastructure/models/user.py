@@ -29,6 +29,7 @@ class User(BaseModelWithTimestamps, table=True):
     jira_account_id: Optional[str] = Field(default=None)
     password: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = Field(default=True)
+    is_jira_linked: bool = Field(default=False)
 
     # System-wide role (e.g., HR, System Admin)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
@@ -73,3 +74,4 @@ class UserUpdate(SQLModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
+    is_jira_linked: Optional[bool] = None
