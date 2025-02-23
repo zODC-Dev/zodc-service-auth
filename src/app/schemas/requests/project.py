@@ -33,3 +33,10 @@ class ProjectUpdateRequest(BaseModel):
             raise ValueError(
                 'Key can only contain alphanumeric characters, underscores, and hyphens')
         return v.upper()
+
+
+class LinkJiraProjectRequest(BaseModel):
+    jira_project_id: str
+    key: str
+    name: str
+    description: Optional[str] = None

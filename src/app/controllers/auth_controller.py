@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 
-from src.app.background.token_refresh import TokenRefreshScheduler
 from src.app.schemas.requests.auth import (
     LoginEmailPasswordRequest,
     LoginJiraCallbackRequest,
@@ -26,10 +25,8 @@ class AuthController:
     def __init__(
         self,
         auth_service: AuthService,
-        token_refresh_scheduler: TokenRefreshScheduler
     ):
         self.auth_service = auth_service
-        self.token_refresh_scheduler = token_refresh_scheduler
 
     async def login(
         self,

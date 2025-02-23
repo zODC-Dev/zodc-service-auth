@@ -1,13 +1,35 @@
+from datetime import datetime, timezone
 from typing import List
 
+from src.app.schemas.requests.project import LinkJiraProjectRequest
+from src.configs.logger import log
+from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
-from src.domain.exceptions.project_exceptions import ProjectKeyAlreadyExistsError, ProjectNotFoundError
+from src.domain.events.project_events import JiraUsersFoundEvent, ProjectJiraLinkedEvent
+from src.domain.exceptions.project_exceptions import (
+    ProjectCreateError,
+    ProjectKeyAlreadyExistsError,
+    ProjectNotFoundError,
+)
+from src.domain.exceptions.role_exceptions import RoleNotFoundError
 from src.domain.repositories.project_repository import IProjectRepository
+from src.domain.repositories.role_repository import IRoleRepository
+from src.domain.repositories.user_repository import IUserRepository
+from src.domain.services.nats_service import INATSService
 
 
 class ProjectService:
-    def __init__(self, project_repository: IProjectRepository):
+    def __init__(
+        self,
+        project_repository: IProjectRepository,
+        role_repository: IRoleRepository,
+        user_repository: IUserRepository,
+        nats_service: INATSService
+    ):
         self.project_repository = project_repository
+        self.role_repository = role_repository
+        self.user_repository = user_repository
+        self.nats_service = nats_service
 
     async def create_project(self, project_data: ProjectCreate) -> Project:
         existing_project = await self.project_repository.get_project_by_key(project_data.key)
@@ -42,3 +64,81 @@ class ProjectService:
 
     async def get_user_projects(self, user_id: int) -> List[Project]:
         return await self.project_repository.get_user_projects(user_id)
+
+    async def link_jira_project(
+        self,
+        project_data: LinkJiraProjectRequest,
+        current_user_id: int
+    ) -> None:
+        # Check if project with key already exists
+        existing_project = await self.project_repository.get_project_by_key(project_data.key)
+        if existing_project:
+            raise ProjectKeyAlreadyExistsError(
+                f"Project with key '{project_data.key}' already exists")
+
+        # Create new project
+        new_project = await self.project_repository.create_project(
+            ProjectCreate(
+                key=project_data.key,
+                name=project_data.name,
+                description=project_data.description
+            )
+        )
+        if not new_project.id:
+            raise ProjectCreateError("Failed to create project")
+
+        # Assign product owner role to current user
+        await self.role_repository.assign_project_role_to_user(
+            user_id=current_user_id,
+            project_id=new_project.id,
+            role_name="product_owner"
+        )
+
+        # Publish event to NATS
+        event = ProjectJiraLinkedEvent(
+            project_id=new_project.id,
+            jira_project_id=project_data.jira_project_id,
+            created_at=datetime.now(timezone.utc),
+            created_by=current_user_id
+        )
+        await self.nats_service.publish(
+            NATSPublishTopic.PROJECT_LINKED.value,
+            event.model_dump(mode='json', exclude=None)
+        )
+
+    async def handle_jira_users_found(self, event: JiraUsersFoundEvent) -> None:
+        """Handle users found in Jira project"""
+        try:
+            # Verify project exists
+            project = await self.project_repository.get_project_by_id(event.project_id)
+            if not project:
+                raise ProjectNotFoundError(f"Project with id {event.project_id} not found")
+
+            # Get member role
+            member_role = await self.role_repository.get_role_by_name("member")
+            if not member_role:
+                raise RoleNotFoundError(role_name="member")
+
+            # Find matching users by jira_account_id and assign member role
+            for jira_user in event.users:
+                user = await self.user_repository.get_user_by_jira_account_id(
+                    jira_user.jira_account_id
+                )
+                if user and user.id:
+                    # Check if user already has a role in project
+                    has_role = await self.role_repository.check_user_has_any_project_role(
+                        user_id=user.id,
+                        project_id=event.project_id
+                    )
+
+                    # Only assign member role if user doesn't have any role
+                    if not has_role:
+                        await self.role_repository.assign_project_role_to_user(
+                            user_id=user.id,
+                            project_id=event.project_id,
+                            role_name="member"
+                        )
+
+        except Exception as e:
+            log.error(f"Error handling Jira users found event: {str(e)}")
+            raise

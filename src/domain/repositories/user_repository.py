@@ -29,3 +29,8 @@ class IUserRepository(ABC):
     async def update_user_by_id(self, user_id: int, user: UserUpdate) -> None:
         """Update user by ID"""
         pass
+
+    @abstractmethod
+    async def get_user_by_jira_account_id(self, jira_account_id: str) -> Optional[User]:
+        """Get user by Jira account ID"""
+        pass

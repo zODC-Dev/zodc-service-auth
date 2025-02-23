@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from functools import partial
+import json
 from typing import Annotated, Any, Callable, Dict, List, Optional, TypeVar
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 import jwt
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.app.background.token_refresh import TokenRefreshScheduler
 from src.app.controllers.auth_controller import AuthController
 from src.app.dependencies.user import get_user_repository
 from src.app.middlewares.auth_middleware import JWTAuth
+from src.app.schemas.requests.auth import JWTClaims
 from src.app.services.auth_service import AuthService
 from src.app.services.user_service import UserService
 from src.configs.auth import oauth2_scheme
@@ -25,10 +26,10 @@ from src.infrastructure.services.jwt_token_service import JWTTokenService
 from src.infrastructure.services.microsoft_sso_service import MicrosoftSSOService
 
 from .common import (
+    get_nats_service,
     get_redis_service,
     get_refresh_token_repository,
     get_role_repository,
-    get_token_refresh_service,
     get_token_service,
     get_user_event_service,
 )
@@ -58,10 +59,10 @@ async def get_auth_service(
     microsoft_sso_service=Depends(get_microsoft_sso_service),
     jira_sso_service=Depends(get_jira_sso_service),
     user_repository=Depends(get_user_repository),
+    nats_service=Depends(get_nats_service),
+    user_event_service=Depends(get_user_event_service),
     redis_service=Depends(get_redis_service),
-    refresh_token_repository=Depends(get_refresh_token_repository),
-    token_refresh_service=Depends(get_token_refresh_service),
-    user_event_service=Depends(get_user_event_service)
+    refresh_token_repository=Depends(get_refresh_token_repository)
 ):
     """Dependency for auth service"""
     return AuthService(
@@ -70,28 +71,19 @@ async def get_auth_service(
         microsoft_sso_service=microsoft_sso_service,
         jira_sso_service=jira_sso_service,
         user_repository=user_repository,
+        nats_service=nats_service,
+        user_event_service=user_event_service,
         redis_service=redis_service,
-        refresh_token_repository=refresh_token_repository,
-        token_refresh_service=token_refresh_service,
-        user_event_service=user_event_service
+        refresh_token_repository=refresh_token_repository
     )
-
-
-async def get_token_refresh_scheduler(
-    token_refresh_service=Depends(get_token_refresh_service)
-) -> TokenRefreshScheduler:
-    """Dependency for token refresh scheduler"""
-    return TokenRefreshScheduler(token_refresh_service)
 
 
 async def get_auth_controller(
     auth_service=Depends(get_auth_service),
-    token_refresh_scheduler=Depends(get_token_refresh_scheduler)
 ) -> AuthController:
     """Dependency for auth controller"""
     return AuthController(
         auth_service=auth_service,
-        token_refresh_scheduler=token_refresh_scheduler
     )
 
 
@@ -174,3 +166,45 @@ require_project_management = staticmethod(
         require_all=True
     )
 )
+
+
+async def get_jwt_claims(request: Request) -> JWTClaims:
+    """Extract JWT claims from Kong headers and return as a structured object"""
+    headers = request.headers
+
+    # Parse list and dict headers with proper fallbacks
+    try:
+        system_permissions_str = headers.get("x-kong-jwt-claim-system_permissions", "[]")
+        system_permissions = json.loads(system_permissions_str)
+        # Convert dict to list if empty dict is received
+        if isinstance(system_permissions, dict) and not system_permissions:
+            system_permissions = []
+    except json.JSONDecodeError:
+        system_permissions = []
+
+    try:
+        project_roles = json.loads(headers.get("x-kong-jwt-claim-project_roles", "{}"))
+    except json.JSONDecodeError:
+        project_roles = {}
+
+    try:
+        project_permissions = json.loads(headers.get("x-kong-jwt-claim-project_permissions", "{}"))
+    except json.JSONDecodeError:
+        project_permissions = {}
+
+    # Convert string boolean to Python boolean
+    is_jira_linked = headers.get("x-kong-jwt-claim-is_jira_linked", "").lower() == "true"
+
+    return JWTClaims(
+        sub=headers.get("x-kong-jwt-claim-sub", ""),
+        email=headers.get("x-kong-jwt-claim-email", ""),
+        name=headers.get("x-kong-jwt-claim-name", ""),
+        system_role=headers.get("x-kong-jwt-claim-system_role", ""),
+        system_permissions=system_permissions,
+        project_roles=project_roles,
+        project_permissions=project_permissions,
+        is_jira_linked=is_jira_linked,
+        exp=int(headers.get("x-kong-jwt-claim-exp", 0)),
+        iat=int(headers.get("x-kong-jwt-claim-iat", 0)),
+        iss=headers.get("x-kong-jwt-claim-iss", "")
+    )

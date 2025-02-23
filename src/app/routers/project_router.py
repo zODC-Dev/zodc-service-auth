@@ -3,9 +3,10 @@ from typing import List
 from fastapi import APIRouter, Depends, Request
 
 from src.app.controllers.project_controller import ProjectController
-from src.app.dependencies.auth import require_auth
+from src.app.dependencies.auth import get_jwt_claims, require_auth
 from src.app.dependencies.project import get_project_controller
-from src.app.schemas.requests.project import ProjectCreateRequest, ProjectUpdateRequest
+from src.app.schemas.requests.auth import JWTClaims
+from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
 from src.app.schemas.responses.project import ProjectResponse
 from src.domain.constants.roles import SystemRoles
 
@@ -74,3 +75,15 @@ async def get_user_projects(
 ):
     """Get all projects for a specific user."""
     return await controller.get_user_projects(user_id)
+
+
+@router.post("/projects/jira/link")
+async def link_jira_project(
+    request: LinkJiraProjectRequest,
+    claims: JWTClaims = Depends(get_jwt_claims),
+    controller: ProjectController = Depends(get_project_controller)
+):
+    """Link project with Jira project"""
+    user_id = int(claims.sub)
+    await controller.link_jira_project(request, user_id)
+    return {"message": "Project linked successfully"}

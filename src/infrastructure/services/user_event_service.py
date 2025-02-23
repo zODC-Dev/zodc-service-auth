@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 from src.configs.logger import log
-from src.domain.constants.user_events import UserEventType
+from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.user_event import UserEvent
 from src.domain.services.nats_service import INATSService
 from src.domain.services.user_event_service import IUserEventService
@@ -14,7 +14,7 @@ class UserEventService(IUserEventService):
     async def publish_user_event(
         self,
         user_id: int,
-        event_type: UserEventType,
+        event_type: NATSPublishTopic,
         data: Dict[str, Any] = None
     ) -> None:
         try:

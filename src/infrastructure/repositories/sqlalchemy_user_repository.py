@@ -5,7 +5,7 @@ from sqlmodel import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
-from src.domain.constants.user_events import UserEventType
+from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.user import User as UserEntity, UserUpdate, UserWithPassword
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
@@ -81,13 +81,13 @@ class SQLAlchemyUserRepository(IUserRepository):
         # Publish user update event
         await self.user_event_service.publish_user_event(
             user_id=user_id,
-            event_type=UserEventType.USER_UPDATED,
+            event_type=NATSPublishTopic.USER_UPDATED,
             data=user.model_dump(exclude_none=True)
         )
 
         # If user is being activated/deactivated, publish specific event
         if user.is_active is not None:
-            event_type = UserEventType.USER_ACTIVATED if user.is_active else UserEventType.USER_DEACTIVATED
+            event_type = NATSPublishTopic.USER_ACTIVATED if user.is_active else NATSPublishTopic.USER_DEACTIVATED
             await self.user_event_service.publish_user_event(
                 user_id=user_id,
                 event_type=event_type
@@ -95,6 +95,13 @@ class SQLAlchemyUserRepository(IUserRepository):
 
         # clear cache in redis with key user:{user_id}
         await self.redis_service.delete(f"user:{user_id}")
+
+    async def get_user_by_jira_account_id(self, jira_account_id: str) -> Optional[UserEntity]:
+        result = await self.session.exec(
+            select(UserModel).where(UserModel.jira_account_id == jira_account_id)
+        )
+        user = result.first()
+        return self._to_domain(user) if user else None
 
     def _to_domain(self, db_user: UserModel) -> UserEntity:
         """Convert DB model to domain entity"""

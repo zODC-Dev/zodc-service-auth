@@ -2,11 +2,11 @@ from typing import List
 
 from fastapi import HTTPException
 
-from src.app.schemas.requests.project import ProjectCreateRequest, ProjectUpdateRequest
+from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
 from src.app.schemas.responses.project import ProjectResponse
 from src.app.services.project_service import ProjectService
 from src.domain.entities.project import ProjectCreate, ProjectUpdate
-from src.domain.exceptions.project_exceptions import ProjectError
+from src.domain.exceptions.project_exceptions import ProjectError, UnauthorizedError
 
 
 class ProjectController:
@@ -63,3 +63,16 @@ class ProjectController:
     async def get_user_projects(self, user_id: int) -> List[ProjectResponse]:
         projects = await self.project_service.get_user_projects(user_id)
         return [ProjectResponse.from_domain(p) for p in projects]
+
+    async def link_jira_project(
+        self,
+        request: LinkJiraProjectRequest,
+        current_user_id: int
+    ) -> None:
+        try:
+            await self.project_service.link_jira_project(
+                project_data=request,
+                current_user_id=current_user_id
+            )
+        except (ProjectError, UnauthorizedError) as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e

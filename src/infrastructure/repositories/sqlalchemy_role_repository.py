@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from sqlmodel import asc, col, delete, desc, func, or_, select
+from sqlmodel import and_, asc, col, delete, desc, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.permission import Permission as PermissionEntity
@@ -15,6 +15,7 @@ from src.domain.exceptions.role_exceptions import (
     RoleAlreadyExistsError,
     RoleCreateError,
     RoleError,
+    RoleIsSystemRoleError,
     RoleNotFoundError,
     RoleUpdateError,
 )
@@ -32,7 +33,6 @@ from src.infrastructure.models.user_project_role import UserProjectRole
 class SQLAlchemyRoleRepository(IRoleRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
-
     def _permission_to_domain(self, permission: Permission) -> PermissionEntity:
         return PermissionEntity(
             id=permission.id,
@@ -156,6 +156,10 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         role = role_result.first()
         if not role or not role.is_active or role.id is None:
             raise RoleNotFoundError(role_name=role_name)
+
+        # Check if role is project role
+        if role.is_system_role:
+            raise RoleIsSystemRoleError(role_name=role_name)
 
         # Check if assignment already exists
         existing_assignment = await self.session.exec(
@@ -474,3 +478,21 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
         except SQLAlchemyError as e:
             raise RoleError(f"Failed to fetch system roles: {str(e)}") from e
+
+    async def check_user_has_any_project_role(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> bool:
+        """Check if user has any role in project"""
+        async with self.session as session:
+            result = await session.execute(
+                select(UserProjectRole)
+                .where(
+                    and_(
+                        UserProjectRole.user_id == user_id,
+                        UserProjectRole.project_id == project_id
+                    )
+                )
+            )
+            return result.scalar() is not None

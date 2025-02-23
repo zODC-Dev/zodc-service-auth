@@ -85,3 +85,12 @@ class IRoleRepository(ABC):
     ) -> Tuple[List[Role], int]:
         """Get paginated and filtered system roles"""
         pass
+
+    @abstractmethod
+    async def check_user_has_any_project_role(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> bool:
+        """Check if user has any role in project"""
+        pass

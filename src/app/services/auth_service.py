@@ -1,11 +1,12 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 from src.configs.logger import log
 from src.domain.constants.auth import TokenType
-from src.domain.constants.user_events import UserEventType
-from src.domain.entities.auth import RefreshTokenEntity, SSOCredentials, TokenPair, UserCredentials
+from src.domain.constants.nats_events import NATSPublishTopic
+from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
+from src.domain.entities.token_event import TokenEvent
 from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
     AuthenticationError,
@@ -19,8 +20,8 @@ from src.domain.repositories.refresh_token_repository import IRefreshTokenReposi
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.jira_sso_service import IJiraSSOService
 from src.domain.services.microsoft_sso_service import IMicrosoftSSOService
+from src.domain.services.nats_service import INATSService
 from src.domain.services.redis_service import IRedisService
-from src.domain.services.token_refresh_service import ITokenRefreshService
 from src.domain.services.token_service import ITokenService
 from src.domain.services.user_event_service import IUserEventService
 
@@ -35,8 +36,8 @@ class AuthService:
         jira_sso_service: IJiraSSOService,
         redis_service: IRedisService,
         refresh_token_repository: IRefreshTokenRepository,
-        token_refresh_service: ITokenRefreshService,
-        user_event_service: IUserEventService
+        user_event_service: IUserEventService,
+        nats_service: INATSService
     ):
         self.auth_repository = auth_repository
         self.token_service = token_service
@@ -45,8 +46,8 @@ class AuthService:
         self.user_repository = user_repository
         self.redis_service = redis_service
         self.refresh_token_repository = refresh_token_repository
-        self.token_refresh_service = token_refresh_service
         self.user_event_service = user_event_service
+        self.nats_service = nats_service
 
     async def login(self, credentials: UserCredentials) -> TokenPair:
         """Handle email/password login"""
@@ -84,60 +85,26 @@ class AuthService:
             if user.id is None:
                 raise UserCreationError("Something went wrong")
 
-            # Revoke existing Microsoft tokens for this user
-            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
-                user_id=user.id,
-                token_type=TokenType.MICROSOFT
-            )
-
-            # Delete cached Microsoft token
-            await self.redis_service.delete_cached_token(
-                user_id=user.id,
-                token_type=TokenType.MICROSOFT
-            )
-
-            # Store new microsoft refresh token
-            await self.refresh_token_repository.create_refresh_token(
-                RefreshTokenEntity(
-                    user_id=user.id,
-                    token=microsoft_info.refresh_token,
-                    expires_at=datetime.now() + timedelta(days=30),
-                    token_type=TokenType.MICROSOFT
-                )
-            )
-
-            # Store microsoft access token to redis
-            await self.redis_service.cache_token(
+            # Publish Microsoft token event to NATS
+            token_event = TokenEvent(
                 user_id=user.id,
                 access_token=microsoft_info.access_token,
-                expiry=microsoft_info.expires_in,
-                token_type=TokenType.MICROSOFT
+                refresh_token=microsoft_info.refresh_token,
+                expires_in=microsoft_info.expires_in,
+                token_type=TokenType.MICROSOFT,
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=microsoft_info.expires_in)
+            )
+            await self.nats_service.publish(
+                NATSPublishTopic.MICROSOFT_TOKEN_UPDATED.value,
+                token_event.model_dump(mode='json', exclude_none=True)
             )
 
             # Create access token
-            token_pair = await self.token_service.create_token_pair(user)
+            return await self.token_service.create_token_pair(user)
 
-            # Schedule token refresh
-            await self.token_refresh_service.schedule_token_refresh(user.id)
-
-            return token_pair
         except Exception as e:
             log.error(f"Error handling Microsoft callback: {e}")
-            raise e
-
-    async def refresh_tokens(self, refresh_token: str) -> TokenPair:
-        """Handle token refresh"""
-        try:
-            return await self.token_service.refresh_tokens(refresh_token)
-        except TokenError as e:
-            # If refresh token is invalid, perform logout
-            try:
-                # Extract user ID from the invalid refresh token
-                token_data = await self.refresh_token_repository.get_by_token(refresh_token)
-                if token_data and token_data.user_id:
-                    await self.logout(token_data.user_id)
-            except Exception as logout_error:
-                log.error(f"Error during auto-logout: {logout_error}")
             raise e
 
     async def handle_jira_callback(self, code: str, user: User) -> TokenPair:
@@ -161,32 +128,20 @@ class AuthService:
                 )
             )
 
-            # Revoke existing Jira tokens for this user
-            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
-                user_id=user.id,
-                token_type=TokenType.JIRA
-            )
-
-            # Store new Jira refresh token in database
-            if jira_info.refresh_token:
-                refresh_token = RefreshTokenEntity(
-                    token=jira_info.refresh_token,
-                    user_id=user.id,
-                    token_type=TokenType.JIRA,
-                    expires_at=datetime.now() + timedelta(days=30)
-                )
-                await self.refresh_token_repository.create_refresh_token(refresh_token)
-
-            # Store Jira access token in Redis
-            await self.redis_service.cache_token(
+            # Publish Jira token event to NATS
+            token_event = TokenEvent(
                 user_id=user.id,
                 access_token=jira_info.access_token,
-                expiry=jira_info.expires_in,
-                token_type=TokenType.JIRA
+                refresh_token=jira_info.refresh_token,
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=jira_info.expires_in),
+                expires_in=jira_info.expires_in,
+                token_type=TokenType.JIRA,
+                created_at=datetime.now(timezone.utc)
             )
-
-            # Schedule token refresh
-            await self.token_refresh_service.schedule_token_refresh(user.id)
+            await self.nats_service.publish(
+                NATSPublishTopic.JIRA_TOKEN_UPDATED.value,
+                token_event.model_dump(mode='json', exclude_none=True)
+            )
 
             # Get updated user to generate new tokens
             updated_user = await self.user_repository.get_user_by_id(user.id)
@@ -225,30 +180,11 @@ class AuthService:
     async def logout(self, user_id: int) -> None:
         """Handle user logout"""
         try:
-            # Revoke all refresh tokens for the user
-            await self.refresh_token_repository.revoke_tokens_by_user_and_type(
-                user_id=user_id,
-                token_type=TokenType.MICROSOFT
-            )
-
             await self.refresh_token_repository.revoke_tokens_by_user_and_type(
                 user_id=user_id,
                 token_type=TokenType.APP
             )
 
-            # Clear cached Microsoft token
-            await self.redis_service.delete_cached_token(
-                user_id=user_id,
-                token_type=TokenType.MICROSOFT
-            )
-
-            # Clear cached Jira token
-            await self.redis_service.delete_cached_token(
-                user_id=user_id,
-                token_type=TokenType.JIRA
-            )
-
-            # Clear user cache
             await self.redis_service.delete(f"user:{user_id}")
 
             # Clear permission cache
@@ -257,9 +193,24 @@ class AuthService:
             # Send logout event
             await self.user_event_service.publish_user_event(
                 user_id=user_id,
-                event_type=UserEventType.USER_LOGOUT
+                event_type=NATSPublishTopic.USER_LOGOUT
             )
 
         except Exception as e:
             log.error(f"Error during logout: {e}")
             raise AuthenticationError("Logout failed") from e
+
+    async def refresh_tokens(self, refresh_token: str) -> TokenPair:
+        """Handle token refresh"""
+        try:
+            return await self.token_service.refresh_tokens(refresh_token)
+        except TokenError as e:
+            # If refresh token is invalid, perform logout
+            try:
+                # Extract user ID from the invalid refresh token
+                token_data = await self.refresh_token_repository.get_by_token(refresh_token)
+                if token_data and token_data.user_id:
+                    await self.logout(token_data.user_id)
+            except Exception as logout_error:
+                log.error(f"Error during auto-logout: {logout_error}")
+            raise e
