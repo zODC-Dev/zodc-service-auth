@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
 from typing import List
 
 from src.app.schemas.requests.project import LinkJiraProjectRequest
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
-from src.domain.events.project_events import JiraUsersFoundEvent, ProjectJiraLinkedEvent
+from src.domain.events.project_events import JiraUsersRequestEvent, JiraUsersResponseEvent, ProjectJiraLinkedEvent
 from src.domain.exceptions.project_exceptions import (
     ProjectCreateError,
     ProjectKeyAlreadyExistsError,
@@ -69,7 +68,7 @@ class ProjectService:
         self,
         project_data: LinkJiraProjectRequest,
         current_user_id: int
-    ) -> None:
+    ) -> Project:
         # Check if project with key already exists
         existing_project = await self.project_repository.get_project_by_key(project_data.key)
         if existing_project:
@@ -94,19 +93,34 @@ class ProjectService:
             role_name="product_owner"
         )
 
-        # Publish event to NATS
+        # Publish project linked event to NATS
         event = ProjectJiraLinkedEvent(
             project_id=new_project.id,
             jira_project_id=project_data.jira_project_id,
-            created_at=datetime.now(timezone.utc),
-            created_by=current_user_id
+            name=project_data.name,
+            key=project_data.key,
+            avatar_url=project_data.avatar_url
         )
         await self.nats_service.publish(
             NATSPublishTopic.PROJECT_LINKED.value,
             event.model_dump(mode='json', exclude=None)
         )
 
-    async def handle_jira_users_found(self, event: JiraUsersFoundEvent) -> None:
+        # Publish find users event to NATS
+        jira_event = JiraUsersRequestEvent(
+            admin_user_id=current_user_id,
+            project_id=new_project.id,
+            jira_project_id=project_data.jira_project_id,
+            key=project_data.key,
+        )
+        await self.nats_service.publish(
+            NATSPublishTopic.JIRA_USERS_REQUEST.value,
+            jira_event.model_dump(mode='json', exclude=None)
+        )
+
+        return new_project
+
+    async def handle_jira_users_response_event(self, event: JiraUsersResponseEvent) -> None:
         """Handle users found in Jira project"""
         try:
             # Verify project exists

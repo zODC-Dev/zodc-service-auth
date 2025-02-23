@@ -77,7 +77,7 @@ async def get_user_projects(
     return await controller.get_user_projects(user_id)
 
 
-@router.post("/projects/jira/link")
+@router.post("/jira/link", response_model=ProjectResponse)
 async def link_jira_project(
     request: LinkJiraProjectRequest,
     claims: JWTClaims = Depends(get_jwt_claims),
@@ -85,5 +85,4 @@ async def link_jira_project(
 ):
     """Link project with Jira project"""
     user_id = int(claims.sub)
-    await controller.link_jira_project(request, user_id)
-    return {"message": "Project linked successfully"}
+    return await controller.link_jira_project(request, user_id)

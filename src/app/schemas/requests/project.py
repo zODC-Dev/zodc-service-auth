@@ -39,4 +39,5 @@ class LinkJiraProjectRequest(BaseModel):
     jira_project_id: str
     key: str
     name: str
-    description: Optional[str] = None
+    description: str
+    avatar_url: Optional[str] = None

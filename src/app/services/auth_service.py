@@ -1,12 +1,10 @@
 import base64
-from datetime import datetime, timedelta, timezone
 import json
 
 from src.configs.logger import log
 from src.domain.constants.auth import TokenType
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
-from src.domain.entities.token_event import TokenEvent
 from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
     AuthenticationError,
@@ -85,19 +83,35 @@ class AuthService:
             if user.id is None:
                 raise UserCreationError("Something went wrong")
 
-            # Publish Microsoft token event to NATS
-            token_event = TokenEvent(
-                user_id=user.id,
-                access_token=microsoft_info.access_token,
-                refresh_token=microsoft_info.refresh_token,
-                expires_in=microsoft_info.expires_in,
-                token_type=TokenType.MICROSOFT,
-                created_at=datetime.now(timezone.utc),
-                expires_at=datetime.now(timezone.utc) + timedelta(seconds=microsoft_info.expires_in)
-            )
+            # # Publish Microsoft token event to NATS
+            # token_event = TokenEvent(
+            #     user_id=user.id,
+            #     access_token=microsoft_info.access_token,
+            #     refresh_token=microsoft_info.refresh_token,
+            #     expires_in=microsoft_info.expires_in,
+            #     token_type=TokenType.MICROSOFT,
+            #     created_at=datetime.now(timezone.utc),
+            #     expires_at=datetime.now(timezone.utc) + timedelta(seconds=microsoft_info.expires_in)
+            # )
+            # Publish Microsoft login event
+            microsoft_login_event = {
+                "user_id": user.id,
+                "email": user.email,
+                "access_token": microsoft_info.access_token,
+                "refresh_token": microsoft_info.refresh_token,
+                "expires_in": microsoft_info.expires_in,
+            }
+
+            # # Publish Microsoft token event to NATS
+            # await self.nats_service.publish(
+            #     NATSPublishTopic.MICROSOFT_TOKEN_UPDATED.value,
+            #     token_event.model_dump(mode='json', exclude_none=True)
+            # )
+
+            # Publish Microsoft login event to NATS
             await self.nats_service.publish(
-                NATSPublishTopic.MICROSOFT_TOKEN_UPDATED.value,
-                token_event.model_dump(mode='json', exclude_none=True)
+                NATSPublishTopic.MICROSOFT_LOGIN.value,
+                microsoft_login_event
             )
 
             # Create access token
@@ -112,6 +126,7 @@ class AuthService:
         try:
             # Get Jira tokens
             jira_info = await self.jira_sso_service.exchange_jira_code(code)
+            log.info(f"Jira info: {jira_info}")
 
             if user.id is None:
                 raise UserNotFoundError("User not found")
@@ -129,18 +144,32 @@ class AuthService:
             )
 
             # Publish Jira token event to NATS
-            token_event = TokenEvent(
-                user_id=user.id,
-                access_token=jira_info.access_token,
-                refresh_token=jira_info.refresh_token,
-                expires_at=datetime.now(timezone.utc) + timedelta(seconds=jira_info.expires_in),
-                expires_in=jira_info.expires_in,
-                token_type=TokenType.JIRA,
-                created_at=datetime.now(timezone.utc)
-            )
+            # token_event = TokenEvent(
+            #     user_id=user.id,
+            #     access_token=jira_info.access_token,
+            #     refresh_token=jira_info.refresh_token,
+            #     expires_at=datetime.now(timezone.utc) + timedelta(seconds=jira_info.expires_in),
+            #     expires_in=jira_info.expires_in,
+            #     token_type=TokenType.JIRA,
+            #     created_at=datetime.now(timezone.utc)
+            # )
+            # await self.nats_service.publish(
+            #     NATSPublishTopic.JIRA_TOKEN_UPDATED.value,
+            #     token_event.model_dump(mode='json', exclude_none=True)
+            # )
+
+            # Publish Jira login event
+            jira_login_event = {
+                "user_id": user.id,
+                "jira_account_id": jira_account_id,
+                "email": user.email,
+                "access_token": jira_info.access_token,
+                "refresh_token": jira_info.refresh_token,
+                "expires_in": jira_info.expires_in,
+            }
             await self.nats_service.publish(
-                NATSPublishTopic.JIRA_TOKEN_UPDATED.value,
-                token_event.model_dump(mode='json', exclude_none=True)
+                NATSPublishTopic.JIRA_LOGIN.value,
+                jira_login_event
             )
 
             # Get updated user to generate new tokens

@@ -42,6 +42,7 @@ class JiraSSOService(IJiraSSOService):
         """Exchange authorization code for Jira tokens"""
         try:
             token_data = await self._exchange_code_for_token(code)
+            log.info(f"Token data: {token_data}")
             return JiraIdentity(
                 access_token=token_data["access_token"],
                 refresh_token=token_data.get("refresh_token"),

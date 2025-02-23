@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from loguru import logger
@@ -20,6 +21,8 @@ logger.add(
     format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
     level="ERROR",
 )
+
+logging.disable(logging.INFO)
 
 # Export the logger
 log = logger

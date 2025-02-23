@@ -68,11 +68,12 @@ class ProjectController:
         self,
         request: LinkJiraProjectRequest,
         current_user_id: int
-    ) -> None:
+    ) -> ProjectResponse:
         try:
-            await self.project_service.link_jira_project(
+            project = await self.project_service.link_jira_project(
                 project_data=request,
                 current_user_id=current_user_id
             )
+            return ProjectResponse.from_domain(project)
         except (ProjectError, UnauthorizedError) as e:
             raise HTTPException(status_code=400, detail=str(e)) from e

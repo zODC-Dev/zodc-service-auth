@@ -14,7 +14,10 @@ class NATSPublishTopic(str, Enum):
     JIRA_TOKEN_UPDATED = "auth.token.jira"
     PROJECT_LINKED = "project.linked"
     PROJECT_UNLINKED = "project.unlinked"
+    JIRA_USERS_REQUEST = "project.users.request"
+    JIRA_LOGIN = "jira.login"
+    MICROSOFT_LOGIN = "microsoft.login"
 
 
 class NATSSubscribeTopic(str, Enum):
-    JIRA_USERS_FOUND = "project.users.found"
+    JIRA_USERS_RESPONSE = "project.users.response"
