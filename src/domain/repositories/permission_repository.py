@@ -30,3 +30,8 @@ class IPermissionRepository(ABC):
     async def get_permissions_of_project_by_user_id(self, user_id: int, project_id: int) -> List[Permission]:
         """Get user's permissions of a project"""
         pass
+
+    @abstractmethod
+    async def get_permissions_by_ids(self, permission_ids: List[int]) -> List[Permission]:
+        """Get permissions by their ids"""
+        pass

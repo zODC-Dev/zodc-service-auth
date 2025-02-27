@@ -39,7 +39,9 @@ class User(BaseEntity):
 class UserCreate(BaseModel):
     email: EmailStr
     name: str
-    microsoft_refresh_token: Optional[str] = None
+    is_active: bool = True
+    jira_account_id: Optional[str] = None
+    is_jira_linked: bool = False
 
 
 class UserUpdate(BaseModel):

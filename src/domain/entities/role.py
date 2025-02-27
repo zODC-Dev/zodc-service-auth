@@ -24,7 +24,7 @@ class RoleCreate(BaseModel):
     description: Optional[str] = None
     is_system_role: bool = False
     is_active: bool = True
-    permission_names: List[str] = Field(default_factory=list)
+    permissions: List[int] = Field(default_factory=list)  # permission ids
 
 
 class RoleUpdate(BaseModel):

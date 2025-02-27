@@ -56,8 +56,12 @@ class User(BaseModelWithTimestamps, table=True):
     )
 
 
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=60)
+class UserCreate(SQLModel):
+    email: str = Field(unique=True, index=True)
+    name: str
+    is_active: bool = Field(default=True)
+    jira_account_id: Optional[str] = Field(default=None)
+    is_jira_linked: bool = Field(default=False)
 
 
 class UserCreateSSO(UserBase):

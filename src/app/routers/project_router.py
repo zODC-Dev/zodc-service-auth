@@ -84,5 +84,6 @@ async def link_jira_project(
     controller: ProjectController = Depends(get_project_controller)
 ):
     """Link project with Jira project"""
+    # TODO: Create user if not exists, is_active = False, is_jira_linked = False
     user_id = int(claims.sub)
     return await controller.link_jira_project(request, user_id)

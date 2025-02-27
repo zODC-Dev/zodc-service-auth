@@ -6,7 +6,7 @@ from src.domain.entities.role import Role, RoleCreate as DomainRoleCreate, RoleU
 from src.domain.entities.user_project_role import UserProjectRole
 from src.domain.exceptions.project_exceptions import ProjectNotFoundError
 from src.domain.exceptions.role_exceptions import (
-    InvalidPermissionsError,
+    InvalidPermissionIdsError,
     RoleError,
     RoleIsSystemRoleError,
     RoleNotFoundError,
@@ -42,22 +42,22 @@ class RoleService:
 
     async def create_role(self, role_data: RoleCreateRequest) -> Role:
         # Convert permission_ids to permission_names
-        if role_data.permission_names:
-            permissions = await self.permission_repository.get_permissions_by_names(
-                role_data.permission_names
+        if role_data.permissions:
+            permissions = await self.permission_repository.get_permissions_by_ids(
+                role_data.permissions
             )
             # Check if all requested permissions were found
-            found_names = {p.name for p in permissions}
-            missing_names = set(role_data.permission_names) - found_names
-            if missing_names:
-                raise InvalidPermissionsError(list(missing_names))
+            found_ids = {p.id for p in permissions}
+            missing_ids = set(role_data.permissions) - found_ids
+            if missing_ids:
+                raise InvalidPermissionIdsError(list(missing_ids))
 
         # Convert to domain model
         domain_role_data = DomainRoleCreate(
             name=role_data.name,
             description=role_data.description,
             is_system_role=role_data.is_system_role,
-            permission_names=role_data.permission_names
+            permissions=role_data.permissions
         )
 
         return await self.role_repository.create_role(domain_role_data)

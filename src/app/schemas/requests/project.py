@@ -1,9 +1,11 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
+
+from .base import BaseRequest
 
 
-class ProjectCreateRequest(BaseModel):
+class ProjectCreateRequest(BaseRequest):
     name: str = Field(..., min_length=1, max_length=100)
     key: str = Field(..., min_length=2, max_length=10)
     description: str = Field(..., max_length=200)
@@ -19,7 +21,7 @@ class ProjectCreateRequest(BaseModel):
         return v.upper()  # Store project keys in uppercase
 
 
-class ProjectUpdateRequest(BaseModel):
+class ProjectUpdateRequest(BaseRequest):
     name: Optional[str] = Field(..., min_length=1, max_length=100)
     key: Optional[str] = Field(..., min_length=2, max_length=10)
     description: Optional[str] = Field(..., max_length=200)
@@ -35,7 +37,7 @@ class ProjectUpdateRequest(BaseModel):
         return v.upper()
 
 
-class LinkJiraProjectRequest(BaseModel):
+class LinkJiraProjectRequest(BaseRequest):
     jira_project_id: str
     key: str
     name: str

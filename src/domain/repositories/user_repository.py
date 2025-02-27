@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from src.domain.entities.user import User, UserUpdate, UserWithPassword
+from src.domain.entities.user import User, UserCreate, UserUpdate, UserWithPassword
 
 
 class IUserRepository(ABC):
@@ -33,4 +33,9 @@ class IUserRepository(ABC):
     @abstractmethod
     async def get_user_by_jira_account_id(self, jira_account_id: str) -> Optional[User]:
         """Get user by Jira account ID"""
+        pass
+
+    @abstractmethod
+    async def create_user(self, user: UserCreate) -> User:
+        """Create new user"""
         pass

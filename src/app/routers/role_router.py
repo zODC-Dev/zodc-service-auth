@@ -19,7 +19,7 @@ from src.app.schemas.responses.role import (
 router = APIRouter()
 
 
-@router.post("/", response_model=RoleResponse,
+@router.post("", response_model=RoleResponse,
              responses={
                  400: {"description": "Role already exists or invalid data"},
                  500: {"description": "Internal server error"}
@@ -49,12 +49,12 @@ async def create_role(
 async def get_system_roles(
     request: Request,
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    page_size: int = Query(10, ge=1, le=100, alias="pageSize"),
     search: Optional[str] = None,
     sort_by: Optional[str] = Query(
-        None, regex="^(name|description|created_at|updated_at)$"),
-    sort_order: Optional[str] = Query(None, regex="^(asc|desc)$"),
-    is_active: Optional[bool] = None,
+        None, regex="^(name|description|created_at|updated_at)$", alias="sortBy"),
+    sort_order: Optional[str] = Query(None, regex="^(asc|desc)$", alias="sortOrder"),
+    is_active: Optional[bool] = Query(None, alias="isActive"),
     controller: RoleController = Depends(get_role_controller)
 ):
     """Get paginated system roles with filtering and sorting.
@@ -82,10 +82,10 @@ async def get_system_roles(
     )
 
 
-@router.get("/", response_model=List[RoleResponse])
+@router.get("", response_model=List[RoleResponse])
 async def get_roles(
     request: Request,
-    include_deleted: bool = False,
+    include_deleted: bool = Query(False, alias="includeDeleted"),
     controller: RoleController = Depends(get_role_controller)
 ):
     """Get all roles.
@@ -122,11 +122,11 @@ async def assign_system_role(
     return {"message": "Role assigned successfully"}
 
 
-@router.put("/{role_id}", response_model=RoleResponse,
-            responses={
-                400: {"description": "Role not found"},
-                500: {"description": "Internal server error"}
-            })
+@router.patch("/{role_id}", response_model=RoleResponse,
+              responses={
+                  400: {"description": "Role not found"},
+                  500: {"description": "Internal server error"}
+              })
 async def update_role(
     request: Request,
     role_id: int,

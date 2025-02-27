@@ -11,6 +11,7 @@ from src.domain.entities.role import Role as RoleEntity, RoleCreate, RoleUpdate
 from src.domain.entities.user import User as UserEntity
 from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
 from src.domain.exceptions.role_exceptions import (
+    InvalidPermissionIdsError,
     InvalidPermissionsError,
     RoleAlreadyExistsError,
     RoleCreateError,
@@ -33,6 +34,7 @@ from src.infrastructure.models.user_project_role import UserProjectRole
 class SQLAlchemyRoleRepository(IRoleRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
+
     def _permission_to_domain(self, permission: Permission) -> PermissionEntity:
         return PermissionEntity(
             id=permission.id,
@@ -243,19 +245,19 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             await self.session.refresh(role)
 
             # If permission_names are provided, fetch and link permissions
-            if role_data.permission_names:
+            if role_data.permissions:
                 # Get permissions by names using async query
                 permissions_query = select(Permission).where(
-                    or_(*[Permission.name ==
-                        name for name in role_data.permission_names])
+                    or_(*[Permission.id ==
+                        id for id in role_data.permissions])
                 )
                 result = await self.session.exec(permissions_query)
                 permissions = result.all()
                 # Validate all permissions exist
-                found_names = {p.name for p in permissions}
-                missing_names = set(role_data.permission_names) - found_names
-                if missing_names:
-                    raise InvalidPermissionsError(list(missing_names))
+                found_ids = {p.id for p in permissions}
+                missing_ids = set(role_data.permissions) - found_ids
+                if missing_ids:
+                    raise InvalidPermissionIdsError(list(missing_ids))
 
                 # Create role permission associations
                 role_permissions = [

@@ -1,12 +1,14 @@
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
+
+from .base import BaseRequest
 
 
-class RoleCreateRequest(BaseModel):
+class RoleCreateRequest(BaseRequest):
     name: str = Field(..., min_length=3, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
-    permission_names: List[str] = Field(default_factory=list)
+    permissions: List[int] = Field(default_factory=list)  # permission ids
     is_system_role: bool = Field(default=False)
 
     @field_validator('name')
@@ -20,7 +22,7 @@ class RoleCreateRequest(BaseModel):
         return v.lower()  # Store role names in lowercase
 
 
-class RoleUpdateRequest(BaseModel):
+class RoleUpdateRequest(BaseRequest):
     name: Optional[str] = Field(None, min_length=3, max_length=50)
     description: Optional[str] = Field(None, max_length=200)
     permission_names: Optional[List[str]] = None
@@ -40,13 +42,13 @@ class RoleUpdateRequest(BaseModel):
         return v.lower()
 
 
-class AssignSystemRoleRequest(BaseModel):
+class AssignSystemRoleRequest(BaseRequest):
     user_id: int = Field(..., description="ID of the user")
     role_name: str = Field(...,
                            description="Name of the system role to assign")
 
 
-class AssignProjectRoleRequest(BaseModel):
+class AssignProjectRoleRequest(BaseRequest):
     user_id: int = Field(..., description="ID of the user")
     role_name: str = Field(...,
                            description="Name of the project role to assign")

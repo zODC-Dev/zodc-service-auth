@@ -126,7 +126,6 @@ class AuthService:
         try:
             # Get Jira tokens
             jira_info = await self.jira_sso_service.exchange_jira_code(code)
-            log.info(f"Jira info: {jira_info}")
 
             if user.id is None:
                 raise UserNotFoundError("User not found")

@@ -4,6 +4,7 @@ from src.app.schemas.requests.project import LinkJiraProjectRequest
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
+from src.domain.entities.user import UserCreate
 from src.domain.events.project_events import JiraUsersRequestEvent, JiraUsersResponseEvent, ProjectJiraLinkedEvent
 from src.domain.exceptions.project_exceptions import (
     ProjectCreateError,
@@ -135,9 +136,24 @@ class ProjectService:
 
             # Find matching users by jira_account_id and assign member role
             for jira_user in event.users:
+                # Try to find existing user
                 user = await self.user_repository.get_user_by_jira_account_id(
                     jira_user.jira_account_id
                 )
+
+                if not user:
+                    # Create new inactive user if not exists
+                    user = await self.user_repository.create_user(
+                        UserCreate(
+                            email=jira_user.email,
+                            name=jira_user.name,
+                            is_active=False,
+                            jira_account_id=jira_user.jira_account_id,
+                            is_jira_linked=True
+                        )
+                    )
+                    log.info(f"Created new inactive user from Jira: {jira_user.email}")
+
                 if user and user.id:
                     # Check if user already has a role in project
                     has_role = await self.role_repository.check_user_has_any_project_role(
@@ -152,6 +168,7 @@ class ProjectService:
                             project_id=event.project_id,
                             role_name="member"
                         )
+                        log.info(f"Assigned member role to user {user.email} in project {event.project_id}")
 
         except Exception as e:
             log.error(f"Error handling Jira users found event: {str(e)}")
