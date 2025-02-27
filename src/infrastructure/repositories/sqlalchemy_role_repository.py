@@ -12,7 +12,6 @@ from src.domain.entities.user import User as UserEntity
 from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
 from src.domain.exceptions.role_exceptions import (
     InvalidPermissionIdsError,
-    InvalidPermissionsError,
     RoleAlreadyExistsError,
     RoleCreateError,
     RoleError,
@@ -291,6 +290,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             raise e from e
 
     async def update_role(self, role_id: int, role_data: RoleUpdate) -> RoleEntity:
+        """Update role with new data including permissions"""
         try:
             # Get role with permissions loaded
             get_role_with_permissions_query = select(Role).where(Role.id == role_id).options(
@@ -312,20 +312,20 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 role.is_system_role = role_data.is_system_role
 
             # Update permissions if provided
-            if role_data.permission_names is not None:
+            if role_data.permissions is not None:
                 # Get permissions by names
                 get_permissions_by_names_query = select(Permission).where(
-                    or_(*[Permission.name ==
-                        name for name in role_data.permission_names])
+                    or_(*[Permission.id ==
+                        id for id in role_data.permissions])
                 )
                 get_permissions_by_names_result = await self.session.exec(get_permissions_by_names_query)
                 permissions = get_permissions_by_names_result.all()
 
                 # Validate all permissions exist
-                found_names = {p.name for p in permissions}
-                missing_names = set(role_data.permission_names) - found_names
-                if missing_names:
-                    raise InvalidPermissionsError(list(missing_names))
+                found_ids = {p.id for p in permissions}
+                missing_ids = set(role_data.permissions) - found_ids
+                if missing_ids:
+                    raise InvalidPermissionIdsError(list(missing_ids))
 
                 # Bugs of sqlmodel, link: https://github.com/fastapi/sqlmodel/issues/909
                 # Delete existing role permissions

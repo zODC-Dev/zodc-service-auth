@@ -23,11 +23,11 @@ class RoleCreateRequest(BaseRequest):
 
 
 class RoleUpdateRequest(BaseRequest):
-    name: Optional[str] = Field(None, min_length=3, max_length=50)
-    description: Optional[str] = Field(None, max_length=200)
-    permission_names: Optional[List[str]] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
     is_active: Optional[bool] = None
     is_system_role: Optional[bool] = None
+    permissions: Optional[List[int]] = None  # Thay thế permission_names bằng permissions
 
     @field_validator('name')
     @classmethod

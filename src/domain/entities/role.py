@@ -30,6 +30,6 @@ class RoleCreate(BaseModel):
 class RoleUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    permission_names: Optional[List[str]] = None
-    is_system_role: Optional[bool] = None
     is_active: Optional[bool] = None
+    is_system_role: Optional[bool] = None
+    permissions: Optional[List[int]] = None  # Thay thế permission_names bằng permissions

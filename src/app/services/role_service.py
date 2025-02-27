@@ -63,13 +63,24 @@ class RoleService:
         return await self.role_repository.create_role(domain_role_data)
 
     async def update_role(self, role_id: int, role_data: RoleUpdateRequest) -> Role:
-        # Convert to domain model
+        # Kiểm tra permissions nếu được cung cấp
+        if role_data.permissions:
+            permissions = await self.permission_repository.get_permissions_by_ids(
+                role_data.permissions
+            )
+            # Kiểm tra xem tất cả permissions yêu cầu có tồn tại không
+            found_ids = {p.id for p in permissions}
+            missing_ids = set(role_data.permissions) - found_ids
+            if missing_ids:
+                raise InvalidPermissionIdsError(list(missing_ids))
+
+        # Chuyển đổi sang domain model
         domain_role_data = DomainRoleUpdate(
             name=role_data.name,
             description=role_data.description,
             is_active=role_data.is_active,
             is_system_role=role_data.is_system_role,
-            permission_names=role_data.permission_names if role_data.permission_names else None
+            permissions=role_data.permissions if role_data.permissions else None
         )
 
         return await self.role_repository.update_role(role_id, domain_role_data)

@@ -51,6 +51,7 @@ class IRoleRepository(ABC):
 
     @abstractmethod
     async def update_role(self, role_id: int, role_data: RoleUpdate) -> Role:
+        """Update role with new data including permissions"""
         pass
 
     @abstractmethod
