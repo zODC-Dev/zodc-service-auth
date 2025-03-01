@@ -85,8 +85,26 @@ class RoleService:
 
         return await self.role_repository.update_role(role_id, domain_role_data)
 
-    async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
-        return await self.role_repository.get_all_roles(include_deleted)
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> Tuple[List[Role], int]:
+        """Get paginated, filtered and sorted roles"""
+        return await self.role_repository.get_all_roles(
+            page=page,
+            page_size=page_size,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            is_active=is_active,
+            is_system_role=is_system_role
+        )
 
     async def delete_role(self, role_id: int) -> Role:
         return await self.role_repository.delete_role(role_id)

@@ -217,13 +217,68 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         roles = result.all()
         return [self._to_domain_project_role(r[0], r[1]) for r in roles]
 
-    async def get_all_roles(self, include_deleted: bool = False) -> List[RoleEntity]:
-        query = select(Role)
-        if not include_deleted:
-            query = query.where(Role.is_active)
-        result = await self.session.exec(query)
-        roles = result.all()
-        return [self._to_domain(r) for r in roles]
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> Tuple[List[RoleEntity], int]:
+        """Get paginated, filtered and sorted roles"""
+        try:
+            # Base query with permissions loaded
+            base_query = select(Role).options(selectinload(Role.permissions))  # type: ignore
+
+            # Apply filters
+            if is_active is not None:
+                base_query = base_query.where(Role.is_active == is_active)
+
+            if is_system_role is not None:
+                base_query = base_query.where(Role.is_system_role == is_system_role)
+
+            # Apply search
+            if search:
+                search_term = f"%{search}%"
+                base_query = base_query.where(
+                    or_(
+                        Role.name.ilike(search_term),  # type: ignore
+                        Role.description.ilike(search_term)  # type: ignore
+                    )
+                )
+
+            # Get total count before pagination and sorting
+            count_query = select(func.count()).select_from(base_query.subquery())
+            total = await self.session.scalar(count_query) or 0
+
+            # Apply sorting
+            valid_sort_fields = {"name", "created_at", "updated_at", "is_active", "is_system_role"}
+            if sort_by and sort_by in valid_sort_fields:
+                sort_column = getattr(Role, sort_by)
+                if sort_order and sort_order.lower() == "desc":
+                    base_query = base_query.order_by(desc(sort_column))
+                else:
+                    base_query = base_query.order_by(asc(sort_column))
+            else:
+                # Default sorting by name
+                base_query = base_query.order_by(asc(Role.name))
+
+            # Apply pagination
+            base_query = base_query.offset((page - 1) * page_size).limit(page_size)
+
+            # Execute query
+            result = await self.session.exec(base_query)
+            roles = result.all()
+
+            # Convert to domain entities
+            domain_roles = [self._to_domain(role) for role in roles]
+
+            return domain_roles, total
+
+        except SQLAlchemyError as e:
+            raise RoleError(f"Failed to fetch roles: {str(e)}") from e
 
     async def create_role(self, role_data: RoleCreate) -> RoleEntity:
         try:

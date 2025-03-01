@@ -76,3 +76,7 @@ class GetSystemRoleResponse(BaseResponse):
 
 class PaginatedGetSystemRolesResponse(PaginatedResponse[GetSystemRoleResponse]):
     pass
+
+
+class PaginatedRoleResponse(PaginatedResponse[RoleResponse]):
+    pass

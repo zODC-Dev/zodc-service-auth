@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import HTTPException
 
@@ -13,6 +13,7 @@ from src.app.schemas.responses.role import (
     GetSystemRoleResponse,
     PaginatedGetProjectRolesResponse,
     PaginatedGetSystemRolesResponse,
+    PaginatedRoleResponse,
     RoleResponse,
 )
 from src.app.services.role_service import RoleService
@@ -48,10 +49,35 @@ class RoleController:
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-    async def get_roles(self, include_deleted: bool = False) -> List[RoleResponse]:
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> PaginatedRoleResponse:
+        """Get paginated, filtered and sorted roles"""
         try:
-            roles = await self.role_service.get_all_roles(include_deleted)
-            return [RoleResponse.from_domain(role) for role in roles]
+            roles, total = await self.role_service.get_all_roles(
+                page=page,
+                page_size=page_size,
+                search=search,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                is_active=is_active,
+                is_system_role=is_system_role
+            )
+
+            return PaginatedRoleResponse(
+                items=[RoleResponse.from_domain(role) for role in roles],
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=(total + page_size - 1) // page_size
+            )
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 

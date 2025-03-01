@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -13,6 +13,7 @@ from src.app.schemas.requests.role import (
 from src.app.schemas.responses.role import (
     PaginatedGetProjectRolesResponse,
     PaginatedGetSystemRolesResponse,
+    PaginatedRoleResponse,
     RoleResponse,
 )
 
@@ -82,23 +83,32 @@ async def get_system_roles(
     )
 
 
-@router.get("", response_model=List[RoleResponse])
-async def get_roles(
-    request: Request,
-    include_deleted: bool = Query(False, alias="includeDeleted"),
+@router.get(
+    "",
+    response_model=PaginatedRoleResponse,
+    summary="Get all roles with pagination, filtering and sorting"
+)
+async def get_all_roles(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page", alias="pageSize"),
+    search: Optional[str] = Query(None, description="Search in name and description"),
+    sort_by: Optional[str] = Query(
+        None, description="Field to sort by (name, created_at, updated_at, is_active, is_system_role)", alias="sortBy"),
+    sort_order: Optional[str] = Query(None, description="Sort order (asc or desc)", alias="sortOrder"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status", alias="isActive"),
+    is_system_role: Optional[bool] = Query(None, description="Filter by system role status", alias="isSystemRole"),
     controller: RoleController = Depends(get_role_controller)
 ):
-    """Get all roles.
-
-    Args:
-        request: FastAPI request object
-        include_deleted: Whether to include deleted roles
-        controller: Role controller instance
-
-    Returns:
-        List of role responses
-    """
-    return await controller.get_roles(include_deleted)
+    """Get all roles with pagination, filtering and sorting."""
+    return await controller.get_all_roles(
+        page=page,
+        page_size=page_size,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        is_active=is_active,
+        is_system_role=is_system_role
+    )
 
 
 @router.post("/system",

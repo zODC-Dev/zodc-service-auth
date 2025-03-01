@@ -59,7 +59,17 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> Tuple[List[Role], int]:
+        """Get paginated, filtered and sorted roles"""
         pass
 
     @abstractmethod
