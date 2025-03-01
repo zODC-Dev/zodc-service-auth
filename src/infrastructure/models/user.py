@@ -30,7 +30,6 @@ class User(BaseModelWithTimestamps, table=True):
     password: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = Field(default=True)
     is_jira_linked: bool = Field(default=False)
-
     # System-wide role (e.g., HR, System Admin)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
 

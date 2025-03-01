@@ -553,3 +553,41 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 )
             )
             return result.scalar() is not None
+
+    async def get_project_users_with_roles(
+        self,
+        project_id: int,
+        search: Optional[str] = None
+    ) -> List[UserProjectRoleEntity]:
+        """Get all users in a project with their roles
+
+        Args:
+            project_id: The ID of the project
+            search: Optional search term to filter users by name or email
+
+        Returns:
+            List of UserProjectRole objects with user and role information
+        """
+        query = (
+            select(UserProjectRole)
+            .options(
+                selectinload(UserProjectRole.user),  # type: ignore
+                selectinload(UserProjectRole.role)  # type: ignore
+            )
+            .where(UserProjectRole.project_id == project_id)
+        )
+
+        # Add search filter if provided
+        if search:
+            search_term = f"%{search}%"
+            query = query.join(User, col(User.id) == UserProjectRole.user_id).where(
+                or_(
+                    col(User.name).ilike(search_term),
+                    col(User.email).ilike(search_term)
+                )
+            )
+
+        result = await self.session.exec(query)
+        user_project_roles = result.all()
+
+        return [self._to_domain_user_project_role(upr) for upr in user_project_roles]

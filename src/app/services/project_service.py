@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Optional
 
 from src.app.schemas.requests.project import LinkJiraProjectRequest
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
 from src.domain.entities.user import UserCreate
+from src.domain.entities.user_project_role import UserProjectRole
 from src.domain.events.project_events import JiraUsersRequestEvent, JiraUsersResponseEvent, ProjectJiraLinkedEvent
 from src.domain.exceptions.project_exceptions import (
     ProjectCreateError,
@@ -173,3 +174,22 @@ class ProjectService:
         except Exception as e:
             log.error(f"Error handling Jira users found event: {str(e)}")
             raise
+
+    async def get_project_users_with_roles(self, project_id: int, search: Optional[str] = None) -> List[UserProjectRole]:
+        """Get all users in a project with their roles
+
+        Args:
+            project_id: The ID of the project
+            search: Optional search term to filter users by name or email
+
+        Returns:
+            List of UserProjectRole objects with user and role information
+        """
+        # First check if the project exists
+        project = await self.project_repository.get_project_by_id(project_id)
+        if not project:
+            raise ProjectNotFoundError(f"Project with id {project_id} not found")
+
+        # Get all user_project_roles for this project with user and role information
+        # This will need to be implemented in the repository
+        return await self.role_repository.get_project_users_with_roles(project_id, search)

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Request
 
@@ -7,7 +7,7 @@ from src.app.dependencies.auth import get_jwt_claims, require_auth
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.auth import JWTClaims
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
-from src.app.schemas.responses.project import ProjectResponse
+from src.app.schemas.responses.project import ProjectResponse, ProjectUsersWithRolesResponse
 from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
@@ -87,3 +87,31 @@ async def link_jira_project(
     # TODO: Create user if not exists, is_active = False, is_jira_linked = False
     user_id = int(claims.sub)
     return await controller.link_jira_project(request, user_id)
+
+
+@router.get(
+    "/{project_id}/users",
+    response_model=ProjectUsersWithRolesResponse,
+    summary="Get all users in a project with their roles"
+)
+async def get_project_users_with_roles(
+    request: Request,
+    project_id: int,
+    search: Optional[str] = None,
+    controller: ProjectController = Depends(get_project_controller)
+):
+    """Get all users in a project with their roles.
+
+    Args:
+        request: FastAPI request object
+        project_id: The ID of the project
+        search: Optional search term to filter users by name or email
+        controller: Project controller instance
+
+    Returns:
+        List of users with their roles in the project
+    """
+    return await controller.get_project_users_with_roles(
+        project_id=project_id,
+        search=search
+    )

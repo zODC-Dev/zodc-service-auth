@@ -18,7 +18,6 @@ class User(BaseEntity):
     microsoft_id: Optional[str] = None
     jira_account_id: Optional[str] = None
     is_jira_linked: bool = False
-
     user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
     system_role: Optional["Role"] = None

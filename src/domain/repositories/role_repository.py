@@ -105,3 +105,11 @@ class IRoleRepository(ABC):
     ) -> bool:
         """Check if user has any role in project"""
         pass
+
+    @abstractmethod
+    async def get_project_users_with_roles(
+        self,
+        project_id: int,
+        search: Optional[str] = None
+    ) -> List[UserProjectRole]:
+        pass
