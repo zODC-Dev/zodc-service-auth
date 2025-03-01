@@ -1,13 +1,17 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from src.app.controllers.project_controller import ProjectController
 from src.app.dependencies.auth import get_jwt_claims, require_auth
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.auth import JWTClaims
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
-from src.app.schemas.responses.project import ProjectResponse, ProjectUsersWithRolesResponse
+from src.app.schemas.responses.project import (
+    PaginatedProjectUsersWithRolesResponse,
+    ProjectResponse,
+    ProjectUsersWithRolesResponse,
+)
 from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
@@ -90,7 +94,7 @@ async def link_jira_project(
 
 
 @router.get(
-    "/{project_id}/users",
+    "/{project_id}/users/all",
     response_model=ProjectUsersWithRolesResponse,
     summary="Get all users in a project with their roles"
 )
@@ -114,4 +118,48 @@ async def get_project_users_with_roles(
     return await controller.get_project_users_with_roles(
         project_id=project_id,
         search=search
+    )
+
+
+@router.get(
+    "/{project_id}/users",
+    response_model=PaginatedProjectUsersWithRolesResponse,
+    summary="Get users in a project with their roles with pagination, filtering, searching, and sorting"
+)
+async def get_project_users_with_roles_paginated(
+    request: Request,
+    project_id: int,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page", alias="pageSize"),
+    search: Optional[str] = Query(None, description="Search by user name or email"),
+    sort_by: Optional[str] = Query(
+        None, description="Field to sort by (name, email, role_name)", alias="sortBy"),
+    sort_order: Optional[str] = Query(None, description="Sort order (asc or desc)", alias="sortOrder"),
+    role_name: Optional[str] = Query(None, description="Filter by role name", alias="roleName"),
+    controller: ProjectController = Depends(get_project_controller)
+):
+    """Get users in a project with their roles with pagination, filtering, searching, and sorting.
+
+    Args:
+        request: FastAPI request object
+        project_id: The ID of the project
+        page: Page number (starts at 1)
+        page_size: Number of items per page
+        search: Optional search term to filter users by name or email
+        sort_by: Field to sort by (name, email, role_name)
+        sort_order: Sort order (asc or desc)
+        role_name: Filter by role name
+        controller: Project controller instance
+
+    Returns:
+        Paginated list of users with their roles in the project
+    """
+    return await controller.get_project_users_with_roles_paginated(
+        project_id=project_id,
+        page=page,
+        page_size=page_size,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        role_name=role_name
     )

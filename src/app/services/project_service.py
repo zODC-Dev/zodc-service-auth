@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.app.schemas.requests.project import LinkJiraProjectRequest
 from src.configs.logger import log
@@ -193,3 +193,44 @@ class ProjectService:
         # Get all user_project_roles for this project with user and role information
         # This will need to be implemented in the repository
         return await self.role_repository.get_project_users_with_roles(project_id, search)
+
+    async def get_project_users_with_roles_paginated(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        role_name: Optional[str] = None
+    ) -> Tuple[List[UserProjectRole], int]:
+        """Get users in a project with their roles with pagination, filtering, searching, and sorting
+
+        Args:
+            project_id: The ID of the project
+            page: Page number (starts at 1)
+            page_size: Number of items per page
+            search: Optional search term to filter users by name or email
+            sort_by: Field to sort by (name, email, role_name)
+            sort_order: Sort order (asc or desc)
+            role_name: Filter by role name
+
+        Returns:
+            Tuple containing a list of UserProjectRole objects and the total count
+        """
+        # First check if the project exists
+        project = await self.project_repository.get_project_by_id(project_id)
+        if not project:
+            raise ProjectNotFoundError(f"Project with id {project_id} not found")
+
+        # Get all user_project_roles for this project with user and role information
+        # with pagination, filtering, searching, and sorting
+        return await self.role_repository.get_project_users_with_roles_paginated(
+            project_id=project_id,
+            page=page,
+            page_size=page_size,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            role_name=role_name
+        )

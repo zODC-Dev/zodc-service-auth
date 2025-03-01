@@ -591,3 +591,135 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         user_project_roles = result.all()
 
         return [self._to_domain_user_project_role(upr) for upr in user_project_roles]
+
+    async def get_project_users_with_roles_paginated(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        role_name: Optional[str] = None
+    ) -> Tuple[List[UserProjectRoleEntity], int]:
+        """Get users in a project with their roles with pagination, filtering, searching, and sorting
+
+        Args:
+            project_id: The ID of the project
+            page: Page number (starts at 1)
+            page_size: Number of items per page
+            search: Optional search term to filter users by name or email
+            sort_by: Field to sort by (name, email, role_name)
+            sort_order: Sort order (asc or desc)
+            role_name: Filter by role name
+
+        Returns:
+            Tuple containing a list of UserProjectRole objects and the total count
+        """
+        async with self.session as session:
+            # Build the base query
+            query = (
+                select(
+                    UserProjectRole,
+                    User,
+                    Role
+                )
+                .join(
+                    User,
+                    col(User.id) == UserProjectRole.user_id
+                )
+                .join(
+                    Role,
+                    col(Role.id) == UserProjectRole.role_id
+                )
+                .where(UserProjectRole.project_id == project_id)
+            )
+
+            # Apply search filter if provided
+            if search:
+                search_term = f"%{search}%"
+                query = query.where(
+                    or_(
+                        col(User.name).ilike(search_term),
+                        col(User.email).ilike(search_term)
+                    )
+                )
+
+            # Apply role name filter if provided
+            if role_name:
+                query = query.where(col(Role.name) == role_name)
+
+            # Get total count before pagination and sorting
+            count_query = select(func.count()).select_from(query.subquery())
+            total = await session.scalar(count_query)
+
+            if total is None or total == 0:
+                return [], 0
+
+            # Apply sorting if provided
+            if sort_by and sort_order:
+                sort_order = sort_order.lower()
+                if sort_order not in ["asc", "desc"]:
+                    sort_order = "asc"
+
+                if sort_by == "name":
+                    order_column = User.name
+                elif sort_by == "email":
+                    order_column = User.email
+                elif sort_by == "role_name":
+                    order_column = Role.name
+                else:
+                    # Default sort by user name
+                    order_column = User.name
+
+                if sort_order == "desc":
+                    query = query.order_by(desc(order_column))
+                else:
+                    query = query.order_by(asc(order_column))
+            else:
+                # Default sort by user name ascending
+                query = query.order_by(col(User.name).asc())
+
+            # Apply pagination
+            query = query.offset((page - 1) * page_size).limit(page_size)
+
+            # Execute the query
+            result = await session.exec(query)
+            rows = result.all()
+
+            # Convert to domain entities
+            user_project_roles = []
+            for upr, user, role in rows:
+                domain_user = UserEntity(
+                    id=user.id,
+                    name=user.name,
+                    email=user.email,
+                    is_active=user.is_active,
+                    created_at=user.created_at,
+                    updated_at=user.updated_at
+                )
+
+                domain_role = RoleEntity(
+                    id=role.id,
+                    name=role.name,
+                    description=role.description,
+                    is_active=role.is_active,
+                    is_system_role=role.is_system_role,
+                    created_at=role.created_at,
+                    updated_at=role.updated_at
+                )
+
+                domain_upr = UserProjectRoleEntity(
+                    id=upr.id,
+                    user_id=upr.user_id,
+                    project_id=upr.project_id,
+                    role_id=upr.role_id,
+                    user=domain_user,
+                    role=domain_role,
+                    created_at=upr.created_at,
+                    updated_at=upr.updated_at
+                )
+
+                user_project_roles.append(domain_upr)
+
+            return user_project_roles, total

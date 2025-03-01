@@ -3,7 +3,12 @@ from typing import List, Optional
 from fastapi import HTTPException
 
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
-from src.app.schemas.responses.project import ProjectResponse, ProjectUsersWithRolesResponse
+from src.app.schemas.responses.project import (
+    PaginatedProjectUsersWithRolesResponse,
+    ProjectResponse,
+    ProjectUsersWithRolesResponse,
+    ProjectUserWithRoleResponse,
+)
 from src.app.services.project_service import ProjectService
 from src.domain.entities.project import ProjectCreate, ProjectUpdate
 from src.domain.exceptions.project_exceptions import ProjectError, UnauthorizedError
@@ -98,5 +103,50 @@ class ProjectController:
                 search=search
             )
             return ProjectUsersWithRolesResponse.from_domain(user_project_roles)
+        except ProjectError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+
+    async def get_project_users_with_roles_paginated(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        role_name: Optional[str] = None
+    ) -> PaginatedProjectUsersWithRolesResponse:
+        """Get users in a project with their roles with pagination, filtering, searching, and sorting
+
+        Args:
+            project_id: The ID of the project
+            page: Page number (starts at 1)
+            page_size: Number of items per page
+            search: Optional search term to filter users by name or email
+            sort_by: Field to sort by (name, email, role_name)
+            sort_order: Sort order (asc or desc)
+            role_name: Filter by role name
+
+        Returns:
+            Paginated list of users with their roles in the project
+        """
+        try:
+            user_project_roles, total = await self.project_service.get_project_users_with_roles_paginated(
+                project_id=project_id,
+                page=page,
+                page_size=page_size,
+                search=search,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                role_name=role_name
+            )
+
+            return PaginatedProjectUsersWithRolesResponse(
+                items=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles],
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=(total + page_size - 1) // page_size
+            )
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e

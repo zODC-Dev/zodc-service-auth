@@ -113,3 +113,17 @@ class IRoleRepository(ABC):
         search: Optional[str] = None
     ) -> List[UserProjectRole]:
         pass
+
+    @abstractmethod
+    async def get_project_users_with_roles_paginated(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        role_name: Optional[str] = None
+    ) -> Tuple[List[UserProjectRole], int]:
+        """Get paginated, filtered and sorted user role assignments for a project"""
+        pass
