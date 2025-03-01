@@ -80,3 +80,13 @@ class PaginatedGetSystemRolesResponse(PaginatedResponse[GetSystemRoleResponse]):
 
 class PaginatedRoleResponse(PaginatedResponse[RoleResponse]):
     pass
+
+
+class AllRolesResponse(BaseResponse):
+    items: List[RoleResponse]
+
+    @classmethod
+    def from_domain(cls, roles: List[Role]) -> 'AllRolesResponse':
+        return cls(
+            items=[RoleResponse.from_domain(role) for role in roles]
+        )

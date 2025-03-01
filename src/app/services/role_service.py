@@ -189,3 +189,21 @@ class RoleService:
             sort_order=sort_order,
             is_active=is_active
         )
+
+    async def get_all_roles_without_pagination(
+        self,
+        is_active: Optional[bool] = None
+    ) -> List[Role]:
+        """Get all roles without pagination, filtering only by is_active"""
+        # We can reuse the existing get_all_roles method but ignore pagination and other filters
+        roles, _ = await self.role_repository.get_all_roles(
+            page=1,
+            # Set a very large page size to effectively get all roles
+            page_size=10000,
+            search=None,
+            sort_by=None,
+            sort_order=None,
+            is_active=is_active,
+            is_system_role=None
+        )
+        return roles

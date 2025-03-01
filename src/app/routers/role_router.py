@@ -11,6 +11,7 @@ from src.app.schemas.requests.role import (
     RoleUpdateRequest,
 )
 from src.app.schemas.responses.role import (
+    AllRolesResponse,
     PaginatedGetProjectRolesResponse,
     PaginatedGetSystemRolesResponse,
     PaginatedRoleResponse,
@@ -231,3 +232,28 @@ async def assign_project_role(
     """
     await controller.assign_project_role(project_id, assignment)
     return {"message": "Role assigned successfully"}
+
+
+@router.get(
+    "/all",
+    response_model=AllRolesResponse,
+    summary="Get all roles without pagination"
+)
+async def get_all_roles_without_pagination(
+    request: Request,
+    is_active: Optional[bool] = Query(None, description="Filter by active status", alias="isActive"),
+    controller: RoleController = Depends(get_role_controller)
+):
+    """Get all roles without pagination.
+
+    Args:
+        request: FastAPI request object
+        is_active: Optional filter by active status
+        controller: Role controller instance
+
+    Returns:
+        List of all roles matching the active status filter
+    """
+    return await controller.get_all_roles_without_pagination(
+        is_active=is_active
+    )

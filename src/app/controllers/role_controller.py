@@ -9,6 +9,7 @@ from src.app.schemas.requests.role import (
     RoleUpdateRequest,
 )
 from src.app.schemas.responses.role import (
+    AllRolesResponse,
     GetProjectRoleResponse,
     GetSystemRoleResponse,
     PaginatedGetProjectRolesResponse,
@@ -164,5 +165,17 @@ class RoleController:
                 page_size=page_size,
                 total_pages=(total + page_size - 1) // page_size
             )
+        except RoleError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    async def get_all_roles_without_pagination(
+        self,
+        is_active: Optional[bool] = None
+    ) -> AllRolesResponse:
+        try:
+            roles = await self.role_service.get_all_roles_without_pagination(
+                is_active=is_active
+            )
+            return AllRolesResponse.from_domain(roles)
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
