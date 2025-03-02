@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from redis.asyncio import Redis
 
+from src.app.middlewares.exception_handler import register_exception_handlers
 from src.app.routers.auth_router import router as auth_router
 from src.app.routers.permission_router import router as permission_router
 from src.app.routers.project_router import router as project_router
@@ -134,6 +135,8 @@ app.include_router(permission_router, prefix=settings.API_V1_STR +
 app.include_router(project_router, prefix=settings.API_V1_STR +
                    "/projects", tags=["projects"])
 
+# Register exception handlers
+register_exception_handlers(app)
 
 if __name__ == "__main__":
     import uvicorn

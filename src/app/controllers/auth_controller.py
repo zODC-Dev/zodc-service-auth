@@ -12,8 +12,8 @@ from src.app.schemas.responses.auth import (
     LoginJiraSuccessResponse,
     LoginSuccessResponse,
     LoginUrlResponse,
-    LogoutResponse,
 )
+from src.app.schemas.responses.base import StandardResponse
 from src.app.services.auth_service import AuthService
 from src.configs.logger import log
 from src.domain.entities.auth import SSOCredentials, UserCredentials
@@ -31,18 +31,21 @@ class AuthController:
     async def login(
         self,
         request: LoginEmailPasswordRequest
-    ) -> LoginSuccessResponse:
+    ) -> StandardResponse[LoginSuccessResponse]:
         try:
             credentials = UserCredentials(
                 email=request.email,
                 password=request.password
             )
             token_pair = await self.auth_service.login(credentials)
-            return LoginSuccessResponse(
-                access_token=token_pair.access_token,
-                refresh_token=token_pair.refresh_token,
-                token_type=token_pair.token_type,
-                expires_in=token_pair.expires_in
+            return StandardResponse(
+                message="Login successful",
+                data=LoginSuccessResponse(
+                    access_token=token_pair.access_token,
+                    refresh_token=token_pair.refresh_token,
+                    token_type=token_pair.token_type,
+                    expires_in=token_pair.expires_in
+                )
             )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
@@ -53,12 +56,15 @@ class AuthController:
     async def login_by_microsoft(
         self,
         request: LoginSSORequest
-    ) -> LoginUrlResponse:
+    ) -> StandardResponse[LoginUrlResponse]:
         try:
             auth_url = await self.auth_service.login_by_microsoft(
                 request.code_challenge
             )
-            return LoginUrlResponse(auth_url=auth_url)
+            return StandardResponse(
+                message="SSO login URL retrieved successfully",
+                data=LoginUrlResponse(auth_url=auth_url)
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=500,
@@ -90,14 +96,17 @@ class AuthController:
     #             detail="SSO authentication failed"
     #         ) from e
 
-    async def refresh_tokens(self, request: RefreshTokenRequest) -> LoginSuccessResponse:
+    async def refresh_tokens(self, request: RefreshTokenRequest) -> StandardResponse[LoginSuccessResponse]:
         try:
             token_pair = await self.auth_service.refresh_tokens(request.refresh_token)
-            return LoginSuccessResponse(
-                access_token=token_pair.access_token,
-                refresh_token=token_pair.refresh_token,
-                token_type=token_pair.token_type,
-                expires_in=token_pair.expires_in
+            return StandardResponse(
+                message="Tokens refreshed successfully",
+                data=LoginSuccessResponse(
+                    access_token=token_pair.access_token,
+                    refresh_token=token_pair.refresh_token,
+                    token_type=token_pair.token_type,
+                    expires_in=token_pair.expires_in
+                )
             )
         except TokenError as e:
             raise HTTPException(
@@ -111,7 +120,7 @@ class AuthController:
     async def handle_microsoft_callback(
         self,
         request: LoginSSOCallbackRequest,
-    ) -> LoginSuccessResponse:
+    ) -> StandardResponse[LoginSuccessResponse]:
         """Handle Microsoft SSO callback"""
         try:
             sso_credentials = SSOCredentials(
@@ -121,11 +130,14 @@ class AuthController:
             )
             token_pair = await self.auth_service.handle_microsoft_callback(sso_credentials)
 
-            return LoginSuccessResponse(
-                access_token=token_pair.access_token,
-                refresh_token=token_pair.refresh_token,
-                token_type=token_pair.token_type,
-                expires_in=token_pair.expires_in
+            return StandardResponse(
+                message="Microsoft SSO callback handled successfully",
+                data=LoginSuccessResponse(
+                    access_token=token_pair.access_token,
+                    refresh_token=token_pair.refresh_token,
+                    token_type=token_pair.token_type,
+                    expires_in=token_pair.expires_in
+                )
             )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
@@ -140,7 +152,7 @@ class AuthController:
         self,
         request: LoginJiraCallbackRequest,
         current_user: User
-    ) -> LoginJiraSuccessResponse:
+    ) -> StandardResponse[LoginJiraSuccessResponse]:
         """Handle Jira SSO callback"""
         try:
             token_pair = await self.auth_service.handle_jira_callback(
@@ -148,11 +160,14 @@ class AuthController:
                 current_user
             )
 
-            return LoginJiraSuccessResponse(
-                access_token=token_pair.access_token,
-                refresh_token=token_pair.refresh_token,
-                token_type=token_pair.token_type,
-                expires_in=token_pair.expires_in
+            return StandardResponse(
+                message="Jira SSO callback handled successfully",
+                data=LoginJiraSuccessResponse(
+                    access_token=token_pair.access_token,
+                    refresh_token=token_pair.refresh_token,
+                    token_type=token_pair.token_type,
+                    expires_in=token_pair.expires_in
+                )
             )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
@@ -166,11 +181,14 @@ class AuthController:
     async def login_by_jira(
         self,
         request: LoginJiraRequest,
-    ) -> LoginUrlResponse:
+    ) -> StandardResponse[LoginUrlResponse]:
         """Handle Jira SSO login request"""
         try:
             auth_url = await self.auth_service.login_by_jira()
-            return LoginUrlResponse(auth_url=auth_url)
+            return StandardResponse(
+                message="Jira SSO login request handled successfully",
+                data=LoginUrlResponse(auth_url=auth_url)
+            )
         except Exception as e:
             log.error(f"Failed to initiate Jira login: {str(e)}")
             raise HTTPException(
@@ -178,14 +196,17 @@ class AuthController:
                 detail="Failed to initiate Jira login"
             ) from e
 
-    async def logout(self, current_user: User) -> LogoutResponse:
+    async def logout(self, current_user: User) -> StandardResponse[None]:
         """Handle user logout"""
         try:
             if current_user.id is None:
                 raise HTTPException(status_code=401, detail="Invalid user")
 
             await self.auth_service.logout(current_user.id)
-            return LogoutResponse(status="success", message="Successfully logged out")
+            return StandardResponse(
+                message="Successfully logged out",
+                data=None
+            )
         except AuthenticationError as e:
             raise HTTPException(status_code=401, detail=str(e)) from e
         except Exception as e:

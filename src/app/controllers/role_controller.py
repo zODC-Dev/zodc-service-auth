@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import HTTPException
 
@@ -8,8 +8,8 @@ from src.app.schemas.requests.role import (
     RoleCreateRequest,
     RoleUpdateRequest,
 )
+from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.role import (
-    AllRolesResponse,
     GetProjectRoleResponse,
     GetSystemRoleResponse,
     PaginatedGetProjectRolesResponse,
@@ -32,19 +32,25 @@ class RoleController:
     def __init__(self, role_service: RoleService):
         self.role_service = role_service
 
-    async def create_role(self, role_data: RoleCreateRequest) -> RoleResponse:
+    async def create_role(self, role_data: RoleCreateRequest) -> StandardResponse[RoleResponse]:
         try:
             role = await self.role_service.create_role(role_data)
-            return RoleResponse.from_domain(role)
+            return StandardResponse(
+                message="Role created successfully",
+                data=RoleResponse.from_domain(role)
+            )
         except RoleAlreadyExistsError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-    async def update_role(self, role_id: int, role_data: RoleUpdateRequest) -> RoleResponse:
+    async def update_role(self, role_id: int, role_data: RoleUpdateRequest) -> StandardResponse[RoleResponse]:
         try:
             role = await self.role_service.update_role(role_id, role_data)
-            return RoleResponse.from_domain(role)
+            return StandardResponse(
+                message="Role updated successfully",
+                data=RoleResponse.from_domain(role)
+            )
         except RoleNotFoundError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         except RoleError as e:
@@ -59,7 +65,7 @@ class RoleController:
         sort_order: Optional[str] = None,
         is_active: Optional[bool] = None,
         is_system_role: Optional[bool] = None
-    ) -> PaginatedRoleResponse:
+    ) -> StandardResponse[PaginatedRoleResponse]:
         """Get paginated, filtered and sorted roles"""
         try:
             roles, total = await self.role_service.get_all_roles(
@@ -72,20 +78,26 @@ class RoleController:
                 is_system_role=is_system_role
             )
 
-            return PaginatedRoleResponse(
-                items=[RoleResponse.from_domain(role) for role in roles],
-                total=total,
-                page=page,
-                page_size=page_size,
-                total_pages=(total + page_size - 1) // page_size
+            return StandardResponse(
+                message="Roles retrieved successfully",
+                data=PaginatedRoleResponse(
+                    items=[RoleResponse.from_domain(role) for role in roles],
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=(total + page_size - 1) // page_size
+                )
             )
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-    async def delete_role(self, role_id: int) -> RoleResponse:
+    async def delete_role(self, role_id: int) -> StandardResponse[RoleResponse]:
         try:
             deleted_role = await self.role_service.delete_role(role_id)
-            return RoleResponse.from_domain(deleted_role)
+            return StandardResponse(
+                message="Role deleted successfully",
+                data=RoleResponse.from_domain(deleted_role)
+            )
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -107,7 +119,7 @@ class RoleController:
         page_size: int = 10,
         role_name: Optional[str] = None,
         search: Optional[str] = None
-    ) -> PaginatedGetProjectRolesResponse:
+    ) -> StandardResponse[PaginatedGetProjectRolesResponse]:
         try:
             user_project_roles, total = await self.role_service.get_project_roles_by_project_id(
                 project_id=project_id,
@@ -117,13 +129,16 @@ class RoleController:
                 search=search
             )
 
-            return PaginatedGetProjectRolesResponse(
-                items=[GetProjectRoleResponse.from_domain(role)
-                       for role in user_project_roles],
-                total=total,
-                page=page,
-                page_size=page_size,
-                total_pages=(total + page_size - 1) // page_size
+            return StandardResponse(
+                message="Project roles retrieved successfully",
+                data=PaginatedGetProjectRolesResponse(
+                    items=[GetProjectRoleResponse.from_domain(role)
+                           for role in user_project_roles],
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=(total + page_size - 1) // page_size
+                )
             )
         except ProjectNotFoundError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
@@ -146,7 +161,7 @@ class RoleController:
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = None,
         is_active: Optional[bool] = None
-    ) -> PaginatedGetSystemRolesResponse:
+    ) -> StandardResponse[PaginatedGetSystemRolesResponse]:
         try:
             roles, total = await self.role_service.get_system_roles(
                 page=page,
@@ -157,13 +172,16 @@ class RoleController:
                 is_active=is_active
             )
 
-            return PaginatedGetSystemRolesResponse(
-                items=[GetSystemRoleResponse.from_domain(
-                    role) for role in roles],
-                total=total,
-                page=page,
-                page_size=page_size,
-                total_pages=(total + page_size - 1) // page_size
+            return StandardResponse(
+                message="System roles retrieved successfully",
+                data=PaginatedGetSystemRolesResponse(
+                    items=[GetSystemRoleResponse.from_domain(
+                        role) for role in roles],
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=(total + page_size - 1) // page_size
+                )
             )
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
@@ -171,11 +189,14 @@ class RoleController:
     async def get_all_roles_without_pagination(
         self,
         is_active: Optional[bool] = None
-    ) -> AllRolesResponse:
+    ) -> StandardResponse[List[RoleResponse]]:
         try:
             roles = await self.role_service.get_all_roles_without_pagination(
                 is_active=is_active
             )
-            return AllRolesResponse.from_domain(roles)
+            return StandardResponse(
+                message="Roles retrieved successfully",
+                data=[RoleResponse.from_domain(role) for role in roles]
+            )
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e

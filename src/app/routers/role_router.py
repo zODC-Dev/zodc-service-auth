@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -10,8 +10,8 @@ from src.app.schemas.requests.role import (
     RoleCreateRequest,
     RoleUpdateRequest,
 )
+from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.role import (
-    AllRolesResponse,
     PaginatedGetProjectRolesResponse,
     PaginatedGetSystemRolesResponse,
     PaginatedRoleResponse,
@@ -21,11 +21,11 @@ from src.app.schemas.responses.role import (
 router = APIRouter()
 
 
-@router.post("", response_model=RoleResponse,
+@router.post("", response_model=StandardResponse[RoleResponse],
              responses={
                  400: {"description": "Role already exists or invalid data"},
                  500: {"description": "Internal server error"}
-             })
+})
 async def create_role(
     request: Request,
     role_data: RoleCreateRequest,
@@ -44,10 +44,10 @@ async def create_role(
     return await controller.create_role(role_data)
 
 
-@router.get("/system", response_model=PaginatedGetSystemRolesResponse,
+@router.get("/system", response_model=StandardResponse[PaginatedGetSystemRolesResponse],
             responses={
                 500: {"description": "Internal server error"}
-            })
+})
 async def get_system_roles(
     request: Request,
     page: int = Query(1, ge=1),
@@ -86,7 +86,7 @@ async def get_system_roles(
 
 @router.get(
     "",
-    response_model=PaginatedRoleResponse,
+    response_model=StandardResponse[PaginatedRoleResponse],
     summary="Get all roles with pagination, filtering and sorting"
 )
 async def get_all_roles(
@@ -116,7 +116,7 @@ async def get_all_roles(
              responses={
                  400: {"description": "User or role not found"},
                  500: {"description": "Internal server error"}
-             })
+             }, response_model=StandardResponse[None])
 async def assign_system_role(
     request: Request,
     role_data: AssignSystemRoleRequest,
@@ -130,14 +130,14 @@ async def assign_system_role(
         controller: Role controller instance
     """
     await controller.assign_system_role(role_data)
-    return {"message": "Role assigned successfully"}
+    return StandardResponse(message="Role assigned successfully", data=None)
 
 
-@router.patch("/{role_id}", response_model=RoleResponse,
+@router.patch("/{role_id}", response_model=StandardResponse[RoleResponse],
               responses={
                   400: {"description": "Role not found"},
                   500: {"description": "Internal server error"}
-              })
+})
 async def update_role(
     request: Request,
     role_id: int,
@@ -158,11 +158,11 @@ async def update_role(
     return await controller.update_role(role_id, role_data)
 
 
-@router.delete("/{role_id}", response_model=RoleResponse,
+@router.delete("/{role_id}", response_model=StandardResponse[RoleResponse],
                responses={
                    400: {"description": "Role not found"},
                    500: {"description": "Internal server error"}
-               })
+})
 async def delete_role(
     request: Request,
     role_id: int,
@@ -172,11 +172,11 @@ async def delete_role(
     return await controller.delete_role(role_id)
 
 
-@router.get("/projects/{project_id}", response_model=PaginatedGetProjectRolesResponse,
+@router.get("/projects/{project_id}", response_model=StandardResponse[PaginatedGetProjectRolesResponse],
             responses={
                 404: {"description": "Project not found"},
                 500: {"description": "Internal server error"}
-            })
+})
 async def get_project_roles(
     request: Request,
     project_id: int,
@@ -215,7 +215,7 @@ async def get_project_roles(
              responses={
                  400: {"description": "Project not found or invalid role assignments or user not found"},
                  500: {"description": "Internal server error"}
-             })
+             }, response_model=StandardResponse[None])
 async def assign_project_role(
     request: Request,
     project_id: int,
@@ -231,12 +231,12 @@ async def assign_project_role(
         controller: Role controller instance
     """
     await controller.assign_project_role(project_id, assignment)
-    return {"message": "Role assigned successfully"}
+    return StandardResponse(message="Role assigned successfully", data=None)
 
 
 @router.get(
     "/all",
-    response_model=AllRolesResponse,
+    response_model=StandardResponse[List[RoleResponse]],
     summary="Get all roles without pagination"
 )
 async def get_all_roles_without_pagination(

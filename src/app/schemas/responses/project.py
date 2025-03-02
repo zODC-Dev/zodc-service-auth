@@ -39,16 +39,6 @@ class ProjectUserWithRoleResponse(BaseResponse):
         )
 
 
-class ProjectUsersWithRolesResponse(BaseResponse):
-    items: List[ProjectUserWithRoleResponse]
-
-    @classmethod
-    def from_domain(cls, user_project_roles: List[UserProjectRole]) -> 'ProjectUsersWithRolesResponse':
-        return cls(
-            items=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles]
-        )
-
-
 class PaginatedProjectUsersWithRolesResponse(BaseResponse):
     items: List[ProjectUserWithRoleResponse]
     total: int

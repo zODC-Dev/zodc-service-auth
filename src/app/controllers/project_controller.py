@@ -3,10 +3,10 @@ from typing import List, Optional
 from fastapi import HTTPException
 
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
+from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
     ProjectResponse,
-    ProjectUsersWithRolesResponse,
     ProjectUserWithRoleResponse,
 )
 from src.app.services.project_service import ProjectService
@@ -18,7 +18,7 @@ class ProjectController:
     def __init__(self, project_service: ProjectService):
         self.project_service = project_service
 
-    async def create_project(self, project_data: ProjectCreateRequest) -> ProjectResponse:
+    async def create_project(self, project_data: ProjectCreateRequest) -> StandardResponse[ProjectResponse]:
         try:
             project = await self.project_service.create_project(
                 ProjectCreate(
@@ -27,26 +27,35 @@ class ProjectController:
                     description=project_data.description
                 )
             )
-            return ProjectResponse.from_domain(project)
+            return StandardResponse(
+                message="Project created successfully",
+                data=ProjectResponse.from_domain(project)
+            )
         except ProjectError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
-    async def get_project(self, project_id: int) -> ProjectResponse:
+    async def get_project(self, project_id: int) -> StandardResponse[ProjectResponse]:
         try:
             project = await self.project_service.get_project(project_id)
-            return ProjectResponse.from_domain(project)
+            return StandardResponse(
+                message="Project retrieved successfully",
+                data=ProjectResponse.from_domain(project)
+            )
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
 
-    async def get_all_projects(self) -> List[ProjectResponse]:
+    async def get_all_projects(self) -> StandardResponse[List[ProjectResponse]]:
         projects = await self.project_service.get_all_projects()
-        return [ProjectResponse.from_domain(p) for p in projects]
+        return StandardResponse(
+            message="Projects retrieved successfully",
+            data=[ProjectResponse.from_domain(p) for p in projects]
+        )
 
     async def update_project(
         self,
         project_id: int,
         project_data: ProjectUpdateRequest
-    ) -> ProjectResponse:
+    ) -> StandardResponse[ProjectResponse]:
         try:
             project = await self.project_service.update_project(
                 project_id,
@@ -55,7 +64,10 @@ class ProjectController:
                     description=project_data.description
                 )
             )
-            return ProjectResponse.from_domain(project)
+            return StandardResponse(
+                message="Project updated successfully",
+                data=ProjectResponse.from_domain(project)
+            )
         except ProjectError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -65,21 +77,27 @@ class ProjectController:
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
 
-    async def get_user_projects(self, user_id: int) -> List[ProjectResponse]:
+    async def get_user_projects(self, user_id: int) -> StandardResponse[List[ProjectResponse]]:
         projects = await self.project_service.get_user_projects(user_id)
-        return [ProjectResponse.from_domain(p) for p in projects]
+        return StandardResponse(
+            message="Projects retrieved successfully",
+            data=[ProjectResponse.from_domain(p) for p in projects]
+        )
 
     async def link_jira_project(
         self,
         request: LinkJiraProjectRequest,
         current_user_id: int
-    ) -> ProjectResponse:
+    ) -> StandardResponse[ProjectResponse]:
         try:
             project = await self.project_service.link_jira_project(
                 project_data=request,
                 current_user_id=current_user_id
             )
-            return ProjectResponse.from_domain(project)
+            return StandardResponse(
+                message="Project linked successfully",
+                data=ProjectResponse.from_domain(project)
+            )
         except (ProjectError, UnauthorizedError) as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -87,7 +105,7 @@ class ProjectController:
         self,
         project_id: int,
         search: Optional[str] = None
-    ) -> ProjectUsersWithRolesResponse:
+    ) -> StandardResponse[List[ProjectUserWithRoleResponse]]:
         """Get all users in a project with their roles
 
         Args:
@@ -102,7 +120,10 @@ class ProjectController:
                 project_id=project_id,
                 search=search
             )
-            return ProjectUsersWithRolesResponse.from_domain(user_project_roles)
+            return StandardResponse(
+                message="Users retrieved successfully",
+                data=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles]
+            )
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
 
@@ -115,7 +136,7 @@ class ProjectController:
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = None,
         role_name: Optional[str] = None
-    ) -> PaginatedProjectUsersWithRolesResponse:
+    ) -> StandardResponse[PaginatedProjectUsersWithRolesResponse]:
         """Get users in a project with their roles with pagination, filtering, searching, and sorting
 
         Args:
@@ -141,12 +162,15 @@ class ProjectController:
                 role_name=role_name
             )
 
-            return PaginatedProjectUsersWithRolesResponse(
-                items=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles],
-                total=total,
-                page=page,
-                page_size=page_size,
-                total_pages=(total + page_size - 1) // page_size
+            return StandardResponse(
+                message="Users retrieved successfully",
+                data=PaginatedProjectUsersWithRolesResponse(
+                    items=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles],
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=(total + page_size - 1) // page_size
+                )
             )
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e

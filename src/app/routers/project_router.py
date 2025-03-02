@@ -7,17 +7,18 @@ from src.app.dependencies.auth import get_jwt_claims, require_auth
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.auth import JWTClaims
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
+from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
     ProjectResponse,
-    ProjectUsersWithRolesResponse,
+    ProjectUserWithRoleResponse,
 )
 from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
 
-@router.post("/", response_model=ProjectResponse)
+@router.post("/", response_model=StandardResponse[ProjectResponse])
 async def create_project(
     request: Request,
     project_data: ProjectCreateRequest,
@@ -27,7 +28,7 @@ async def create_project(
     return await controller.create_project(project_data)
 
 
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get("/{project_id}", response_model=StandardResponse[ProjectResponse])
 async def get_project(
     request: Request,
     project_id: int,
@@ -37,7 +38,7 @@ async def get_project(
     return await controller.get_project(project_id)
 
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("", response_model=StandardResponse[List[ProjectResponse]])
 async def get_all_projects(
     request: Request,
     controller: ProjectController = Depends(get_project_controller),
@@ -49,7 +50,7 @@ async def get_all_projects(
     return await controller.get_all_projects()
 
 
-@router.put("/{project_id}", response_model=ProjectResponse)
+@router.put("/{project_id}", response_model=StandardResponse[ProjectResponse])
 async def update_project(
     request: Request,
     project_id: int,
@@ -60,7 +61,7 @@ async def update_project(
     return await controller.update_project(project_id, project_data)
 
 
-@router.delete("/{project_id}")
+@router.delete("/{project_id}", response_model=StandardResponse[None])
 async def delete_project(
     request: Request,
     project_id: int,
@@ -68,10 +69,10 @@ async def delete_project(
 ):
     """Delete a project."""
     await controller.delete_project(project_id)
-    return {"message": "Project deleted successfully"}
+    return StandardResponse(message="Project deleted successfully", data=None)
 
 
-@router.get("/user/{user_id}", response_model=List[ProjectResponse])
+@router.get("/user/{user_id}", response_model=StandardResponse[List[ProjectResponse]])
 async def get_user_projects(
     request: Request,
     user_id: int,
@@ -81,7 +82,7 @@ async def get_user_projects(
     return await controller.get_user_projects(user_id)
 
 
-@router.post("/jira/link", response_model=ProjectResponse)
+@router.post("/jira/link", response_model=StandardResponse[ProjectResponse])
 async def link_jira_project(
     request: LinkJiraProjectRequest,
     claims: JWTClaims = Depends(get_jwt_claims),
@@ -95,7 +96,7 @@ async def link_jira_project(
 
 @router.get(
     "/{project_id}/users/all",
-    response_model=ProjectUsersWithRolesResponse,
+    response_model=StandardResponse[List[ProjectUserWithRoleResponse]],
     summary="Get all users in a project with their roles"
 )
 async def get_project_users_with_roles(
@@ -123,7 +124,7 @@ async def get_project_users_with_roles(
 
 @router.get(
     "/{project_id}/users",
-    response_model=PaginatedProjectUsersWithRolesResponse,
+    response_model=StandardResponse[PaginatedProjectUsersWithRolesResponse],
     summary="Get users in a project with their roles with pagination, filtering, searching, and sorting"
 )
 async def get_project_users_with_roles_paginated(
