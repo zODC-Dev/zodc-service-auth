@@ -1,7 +1,7 @@
 from typing import Optional
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import select, update
+from sqlmodel import col, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
@@ -10,6 +10,9 @@ from src.domain.entities.user import User as UserEntity, UserCreate, UserUpdate,
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.user_event_service import IUserEventService
+from src.infrastructure.models.permission import Permission as PermissionModel
+from src.infrastructure.models.role import Role as RoleModel
+from src.infrastructure.models.role_permission import RolePermission as RolePermissionModel
 from src.infrastructure.models.user import User as UserModel
 
 
@@ -26,9 +29,24 @@ class SQLAlchemyUserRepository(IUserRepository):
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
         result = await self.session.exec(
-            select(UserModel).where(UserModel.id == user_id)
+            select(UserModel, RoleModel, PermissionModel).join(RoleModel, col(UserModel.role_id) == col(RoleModel.id)).join(
+                RolePermissionModel, col(RoleModel.id) == col(RolePermissionModel.role_id)).join(
+                PermissionModel, col(RolePermissionModel.permission_id) == col(PermissionModel.id)).where(UserModel.id == user_id)
         )
-        user = result.first()
+        results = result.all()
+
+        if not results:
+            return None
+
+        user = results[0][0]  # First user from first result
+        role = results[0][1]  # First role from first result
+
+        # Collect all permissions from all results
+        permissions = [row[2] for row in results]
+
+        user.system_role = role
+        user.system_role.permissions = permissions
+
         return self._to_domain(user) if user else None
 
     async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[UserEntity]:
