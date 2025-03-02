@@ -14,13 +14,13 @@ from src.app.schemas.responses.auth import (
     LoginJiraSuccessResponse,
     LoginSuccessResponse,
     LoginUrlResponse,
-    LogoutResponse,
 )
+from src.app.schemas.responses.base import StandardResponse
 
 router = APIRouter()
 
 
-@router.post("/token", response_model=LoginSuccessResponse)
+@router.post("/token", response_model=StandardResponse[LoginSuccessResponse])
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     controller: Annotated[AuthController, Depends(get_auth_controller)]
@@ -33,7 +33,7 @@ async def login(
     return await controller.login(request)
 
 
-@router.post("/jira", response_model=LoginUrlResponse)
+@router.post("/jira", response_model=StandardResponse[LoginUrlResponse])
 async def login_by_jira(
     request: LoginJiraRequest,
     current_user: CurrentUser,
@@ -43,7 +43,7 @@ async def login_by_jira(
     return await controller.login_by_jira(request)
 
 
-@router.post("/jira/callback", response_model=LoginJiraSuccessResponse)
+@router.post("/jira/callback", response_model=StandardResponse[LoginJiraSuccessResponse])
 async def jira_callback(
     request: LoginJiraCallbackRequest,
     current_user: CurrentUser,
@@ -53,7 +53,7 @@ async def jira_callback(
     return await controller.handle_jira_callback(request, current_user)
 
 
-@router.post("/logout", response_model=LogoutResponse)
+@router.post("/logout", response_model=StandardResponse[None])
 async def logout(
     current_user: CurrentUser,
     controller: AuthController = Depends(get_auth_controller)

@@ -105,6 +105,11 @@ class SQLAlchemyPermissionRepository(IPermissionRepository):
         result = await self.session.exec(stmt)
         return [self._to_domain(p) for p in result.all()]
 
+    async def get_permissions_by_ids(self, permission_ids: List[int]) -> List[PermissionEntity]:
+        stmt = select(Permission).where(Permission.id.in_(permission_ids))  # type: ignore
+        result = await self.session.exec(stmt)
+        return [self._to_domain(p) for p in result.all()]
+
     def _to_domain(self, permission: Permission) -> PermissionEntity:
         return PermissionEntity(
             id=permission.id,

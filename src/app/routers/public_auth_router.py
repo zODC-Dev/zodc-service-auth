@@ -10,11 +10,12 @@ from src.app.schemas.requests.auth import (
     RefreshTokenRequest,
 )
 from src.app.schemas.responses.auth import LoginSuccessResponse, LoginUrlResponse
+from src.app.schemas.responses.base import StandardResponse
 
 router = APIRouter()
 
 
-@router.post("/login", response_model=LoginSuccessResponse)
+@router.post("/login", response_model=StandardResponse[LoginSuccessResponse])
 async def login_by_email_password(
     request: LoginEmailPasswordRequest,
     controller: AuthController = Depends(get_auth_controller)
@@ -23,7 +24,7 @@ async def login_by_email_password(
     return await controller.login(request)
 
 
-@router.post("/microsoft", response_model=LoginUrlResponse)
+@router.post("/microsoft", response_model=StandardResponse[LoginUrlResponse])
 async def login_by_microsoft(
     request: LoginSSORequest,
     controller: AuthController = Depends(get_auth_controller)
@@ -32,7 +33,7 @@ async def login_by_microsoft(
     return await controller.login_by_microsoft(request)
 
 
-@router.post("/microsoft/callback", response_model=LoginSuccessResponse)
+@router.post("/microsoft/callback", response_model=StandardResponse[LoginSuccessResponse])
 async def microsoft_callback(
     request: LoginSSOCallbackRequest,
     controller: AuthController = Depends(get_auth_controller)
@@ -41,7 +42,7 @@ async def microsoft_callback(
     return await controller.handle_microsoft_callback(request)
 
 
-@router.post("/refresh", response_model=LoginSuccessResponse)
+@router.post("/refresh", response_model=StandardResponse[LoginSuccessResponse])
 async def refresh_tokens(
     request: RefreshTokenRequest,
     controller: AuthController = Depends(get_auth_controller)

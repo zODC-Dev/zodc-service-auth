@@ -68,6 +68,16 @@ class InvalidPermissionsError(RoleError):
         )
 
 
+class InvalidPermissionIdsError(RoleError):
+    """Raised when invalid permission ids are specified for a role"""
+
+    def __init__(self, invalid_permissions: List[int]):
+        super().__init__(
+            f"The following permission ids are invalid: {
+                ', '.join(str(id) for id in invalid_permissions)}"
+        )
+
+
 class SystemRoleModificationError(RoleError):
     """Raised when attempting to modify a system role without proper authorization"""
 

@@ -30,7 +30,6 @@ class User(BaseModelWithTimestamps, table=True):
     password: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = Field(default=True)
     is_jira_linked: bool = Field(default=False)
-
     # System-wide role (e.g., HR, System Admin)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
 
@@ -56,8 +55,12 @@ class User(BaseModelWithTimestamps, table=True):
     )
 
 
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=60)
+class UserCreate(SQLModel):
+    email: str = Field(unique=True, index=True)
+    name: str
+    is_active: bool = Field(default=True)
+    jira_account_id: Optional[str] = Field(default=None)
+    is_jira_linked: bool = Field(default=False)
 
 
 class UserCreateSSO(UserBase):

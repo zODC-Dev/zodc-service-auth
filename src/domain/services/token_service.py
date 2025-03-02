@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.entities.auth import CachedToken, TokenPair
+from src.domain.entities.auth import TokenPair
 from src.domain.entities.user import User
 
 
@@ -26,14 +26,4 @@ class ITokenService(ABC):
     @abstractmethod
     async def get_microsoft_token(self, user_id: int, db: AsyncSession) -> str:
         """Get Microsoft token for user"""
-        pass
-
-    @abstractmethod
-    async def get_valid_microsoft_token(self, user_id: int) -> Optional[CachedToken]:
-        """Get valid Microsoft token, refreshing if necessary"""
-        pass
-
-    @abstractmethod
-    async def get_valid_jira_token(self, user_id: int) -> Optional[CachedToken]:
-        """Get valid Jira token, refreshing if necessary"""
         pass

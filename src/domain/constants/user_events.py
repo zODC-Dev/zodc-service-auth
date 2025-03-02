@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class UserEventType(Enum):
+class NATSPublishTopic(Enum):
     ACCESS_TOKEN_UPDATED = "user.access_token.updated"
     REFRESH_TOKEN_UPDATED = "user.refresh_token.updated"
     USER_DEACTIVATED = "user.deactivated"

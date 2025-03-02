@@ -50,6 +50,7 @@ exclude = [
     ".ruff_cache",
     "alembic_migrations",
 ]
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [

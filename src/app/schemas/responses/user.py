@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user import User
@@ -13,6 +13,7 @@ class UserResponse(BaseResponse):
     is_active: bool
     created_at: datetime
     is_jira_linked: bool
+    permission_names: List[str]
 
     @classmethod
     def from_domain(cls, user: User) -> "UserResponse":
@@ -23,5 +24,7 @@ class UserResponse(BaseResponse):
             system_role=user.system_role.name if user.system_role else None,
             is_active=user.is_active,
             created_at=user.created_at,
-            is_jira_linked=user.is_jira_linked
+            is_jira_linked=user.is_jira_linked,
+            permission_names=[
+                p.name for p in user.system_role.permissions] if user.system_role and user.system_role.permissions else []
         )

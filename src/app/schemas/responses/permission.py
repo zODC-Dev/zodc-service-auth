@@ -1,10 +1,7 @@
 from typing import List, Optional, Set
 
 from src.app.schemas.responses.base import BaseResponse
-from src.domain.entities.permission import (
-    Permission,
-    PermissionVerificationResult as DomainPermissionVerificationResult,
-)
+from src.domain.entities.permission import Permission
 
 
 class PermissionResponse(BaseResponse):
@@ -34,24 +31,4 @@ class GroupedPermissionResponse(BaseResponse):
                 {permission.group for permission in permissions if permission.group}),
             permissions=[PermissionResponse.from_domain(
                 permission) for permission in permissions]
-        )
-
-
-class PermissionVerificationResponse(BaseResponse):
-    allowed: bool
-    user_id: int
-    permissions: List[str]
-    scope: str
-    project_id: Optional[int] = None
-    error: Optional[str] = None
-
-    @classmethod
-    def from_domain(cls, result: DomainPermissionVerificationResult) -> "PermissionVerificationResponse":
-        return cls(
-            allowed=result.allowed,
-            user_id=result.user_id,
-            permissions=result.permissions,
-            scope=result.scope,
-            project_id=result.project_id,
-            error=result.error
         )

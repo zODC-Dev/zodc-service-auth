@@ -6,7 +6,7 @@ from src.domain.entities.role import Role, RoleCreate as DomainRoleCreate, RoleU
 from src.domain.entities.user_project_role import UserProjectRole
 from src.domain.exceptions.project_exceptions import ProjectNotFoundError
 from src.domain.exceptions.role_exceptions import (
-    InvalidPermissionsError,
+    InvalidPermissionIdsError,
     RoleError,
     RoleIsSystemRoleError,
     RoleNotFoundError,
@@ -42,40 +42,69 @@ class RoleService:
 
     async def create_role(self, role_data: RoleCreateRequest) -> Role:
         # Convert permission_ids to permission_names
-        if role_data.permission_names:
-            permissions = await self.permission_repository.get_permissions_by_names(
-                role_data.permission_names
+        if role_data.permissions:
+            permissions = await self.permission_repository.get_permissions_by_ids(
+                role_data.permissions
             )
             # Check if all requested permissions were found
-            found_names = {p.name for p in permissions}
-            missing_names = set(role_data.permission_names) - found_names
-            if missing_names:
-                raise InvalidPermissionsError(list(missing_names))
+            found_ids = {p.id for p in permissions}
+            missing_ids = set(role_data.permissions) - found_ids
+            if missing_ids:
+                raise InvalidPermissionIdsError(list(missing_ids))
 
         # Convert to domain model
         domain_role_data = DomainRoleCreate(
             name=role_data.name,
             description=role_data.description,
             is_system_role=role_data.is_system_role,
-            permission_names=role_data.permission_names
+            permissions=role_data.permissions
         )
 
         return await self.role_repository.create_role(domain_role_data)
 
     async def update_role(self, role_id: int, role_data: RoleUpdateRequest) -> Role:
-        # Convert to domain model
+        # Kiểm tra permissions nếu được cung cấp
+        if role_data.permissions:
+            permissions = await self.permission_repository.get_permissions_by_ids(
+                role_data.permissions
+            )
+            # Kiểm tra xem tất cả permissions yêu cầu có tồn tại không
+            found_ids = {p.id for p in permissions}
+            missing_ids = set(role_data.permissions) - found_ids
+            if missing_ids:
+                raise InvalidPermissionIdsError(list(missing_ids))
+
+        # Chuyển đổi sang domain model
         domain_role_data = DomainRoleUpdate(
             name=role_data.name,
             description=role_data.description,
             is_active=role_data.is_active,
             is_system_role=role_data.is_system_role,
-            permission_names=role_data.permission_names if role_data.permission_names else None
+            permissions=role_data.permissions if role_data.permissions else None
         )
 
         return await self.role_repository.update_role(role_id, domain_role_data)
 
-    async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
-        return await self.role_repository.get_all_roles(include_deleted)
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> Tuple[List[Role], int]:
+        """Get paginated, filtered and sorted roles"""
+        return await self.role_repository.get_all_roles(
+            page=page,
+            page_size=page_size,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            is_active=is_active,
+            is_system_role=is_system_role
+        )
 
     async def delete_role(self, role_id: int) -> Role:
         return await self.role_repository.delete_role(role_id)
@@ -160,3 +189,21 @@ class RoleService:
             sort_order=sort_order,
             is_active=is_active
         )
+
+    async def get_all_roles_without_pagination(
+        self,
+        is_active: Optional[bool] = None
+    ) -> List[Role]:
+        """Get all roles without pagination, filtering only by is_active"""
+        # We can reuse the existing get_all_roles method but ignore pagination and other filters
+        roles, _ = await self.role_repository.get_all_roles(
+            page=1,
+            # Set a very large page size to effectively get all roles
+            page_size=10000,
+            search=None,
+            sort_by=None,
+            sort_order=None,
+            is_active=is_active,
+            is_system_role=None
+        )
+        return roles

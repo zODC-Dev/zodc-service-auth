@@ -51,6 +51,7 @@ class IRoleRepository(ABC):
 
     @abstractmethod
     async def update_role(self, role_id: int, role_data: RoleUpdate) -> Role:
+        """Update role with new data including permissions"""
         pass
 
     @abstractmethod
@@ -58,7 +59,17 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all_roles(self, include_deleted: bool = False) -> List[Role]:
+    async def get_all_roles(
+        self,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        is_system_role: Optional[bool] = None
+    ) -> Tuple[List[Role], int]:
+        """Get paginated, filtered and sorted roles"""
         pass
 
     @abstractmethod
@@ -84,4 +95,35 @@ class IRoleRepository(ABC):
         is_active: Optional[bool] = None
     ) -> Tuple[List[Role], int]:
         """Get paginated and filtered system roles"""
+        pass
+
+    @abstractmethod
+    async def check_user_has_any_project_role(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> bool:
+        """Check if user has any role in project"""
+        pass
+
+    @abstractmethod
+    async def get_project_users_with_roles(
+        self,
+        project_id: int,
+        search: Optional[str] = None
+    ) -> List[UserProjectRole]:
+        pass
+
+    @abstractmethod
+    async def get_project_users_with_roles_paginated(
+        self,
+        project_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None,
+        role_name: Optional[str] = None
+    ) -> Tuple[List[UserProjectRole], int]:
+        """Get paginated, filtered and sorted user role assignments for a project"""
         pass
