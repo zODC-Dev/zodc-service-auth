@@ -43,7 +43,7 @@ async def get_all_projects(
     request: Request,
     controller: ProjectController = Depends(get_project_controller),
     auth_data=require_auth(
-        system_roles=[SystemRoles.USER]
+        system_roles=[SystemRoles.PRODUCT_OWNER]
     )
 ):
     """Get all projects."""

@@ -17,7 +17,8 @@ class SQLAlchemyProjectRepository(IProjectRepository):
         project = Project(
             name=project_data.name,
             key=project_data.key,
-            description=project_data.description
+            description=project_data.description,
+            avatar_url=project_data.avatar_url
         )
         self.session.add(project)
         await self.session.commit()
@@ -79,5 +80,6 @@ class SQLAlchemyProjectRepository(IProjectRepository):
             name=project.name,
             key=project.key,
             description=project.description,
-            user_project_roles=[]
+            user_project_roles=[],
+            avatar_url=project.avatar_url
         )

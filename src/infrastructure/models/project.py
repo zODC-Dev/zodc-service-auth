@@ -16,6 +16,7 @@ class Project(BaseModelWithTimestamps, table=True):
     name: str = Field(unique=True, index=True)
     key: str = Field(unique=True, index=True)
     description: Optional[str] = None
+    avatar_url: Optional[str] = None
 
     # Relationship with users through UserProjectRole
     users: List["User"] = Relationship(

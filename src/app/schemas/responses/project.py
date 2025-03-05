@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.project import Project
@@ -10,6 +10,8 @@ class ProjectResponse(BaseResponse):
     name: str
     key: str
     description: str
+    avatar_url: Optional[str] = None
+    is_jira_linked: bool = True
 
     @classmethod
     def from_domain(cls, project: Project) -> 'ProjectResponse':
@@ -17,7 +19,9 @@ class ProjectResponse(BaseResponse):
             id=project.id,
             name=project.name,
             key=project.key,
-            description=project.description
+            description=project.description,
+            avatar_url=project.avatar_url,
+            is_jira_linked=True
         )
 
 
