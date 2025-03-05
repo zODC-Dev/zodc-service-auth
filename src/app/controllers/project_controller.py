@@ -6,8 +6,8 @@ from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCrea
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
+    ProjectAssigneeResponse,
     ProjectResponse,
-    ProjectUserWithRoleResponse,
 )
 from src.app.services.project_service import ProjectService
 from src.domain.entities.project import ProjectCreate, ProjectUpdate
@@ -105,7 +105,7 @@ class ProjectController:
         self,
         project_id: int,
         search: Optional[str] = None
-    ) -> StandardResponse[List[ProjectUserWithRoleResponse]]:
+    ) -> StandardResponse[List[ProjectAssigneeResponse]]:
         """Get all users in a project with their roles
 
         Args:
@@ -122,7 +122,7 @@ class ProjectController:
             )
             return StandardResponse(
                 message="Users retrieved successfully",
-                data=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles]
+                data=[ProjectAssigneeResponse.from_domain(upr) for upr in user_project_roles]
             )
         except ProjectError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
@@ -165,7 +165,7 @@ class ProjectController:
             return StandardResponse(
                 message="Users retrieved successfully",
                 data=PaginatedProjectUsersWithRolesResponse(
-                    items=[ProjectUserWithRoleResponse.from_domain(upr) for upr in user_project_roles],
+                    items=[ProjectAssigneeResponse.from_domain(upr) for upr in user_project_roles],
                     total=total,
                     page=page,
                     page_size=page_size,

@@ -30,6 +30,8 @@ class User(BaseModelWithTimestamps, table=True):
     password: Optional[str] = Field(default=None, max_length=60)
     is_active: bool = Field(default=True)
     is_jira_linked: bool = Field(default=False)
+    is_system_user: bool = Field(default=True)  # Default to True for users who log in
+    avatar_url: Optional[str] = Field(default=None)  # User's avatar URL from Jira
     # System-wide role (e.g., HR, System Admin)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
 
@@ -61,6 +63,7 @@ class UserCreate(SQLModel):
     is_active: bool = Field(default=True)
     jira_account_id: Optional[str] = Field(default=None)
     is_jira_linked: bool = Field(default=False)
+    is_system_user: bool = Field(default=True)  # Default to True for users who log in
 
 
 class UserCreateSSO(UserBase):
@@ -78,3 +81,4 @@ class UserUpdate(SQLModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     is_jira_linked: Optional[bool] = None
+    avatar_url: Optional[str] = None  # User's avatar URL from Jira

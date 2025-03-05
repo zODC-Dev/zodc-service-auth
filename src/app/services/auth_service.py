@@ -1,7 +1,11 @@
 import base64
 import json
+from typing import Optional
+
+from aiohttp import ClientSession
 
 from src.configs.logger import log
+from src.configs.settings import settings
 from src.domain.constants.auth import TokenType
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
@@ -133,12 +137,16 @@ class AuthService:
             # Extract Jira account ID from access token
             jira_account_id = await self._extract_jira_account_id(jira_info.access_token)
 
-            # Update user with Jira account ID and linked status
+            # Fetch user avatar URL from Jira API
+            avatar_url = await self._fetch_jira_user_avatar(jira_info.access_token, jira_account_id)
+
+            # Update user with Jira account ID, linked status, and avatar URL
             await self.user_repository.update_user_by_id(
                 user.id,
                 UserUpdate(
                     jira_account_id=jira_account_id,
-                    is_jira_linked=True
+                    is_jira_linked=True,
+                    avatar_url=avatar_url
                 )
             )
 
@@ -204,6 +212,34 @@ class AuthService:
         except Exception as e:
             log.error(f"Error extracting Jira account ID: {e}")
             raise ValueError("Failed to extract Jira account ID from token") from e
+
+    async def _fetch_jira_user_avatar(self, access_token: str, account_id: str) -> Optional[str]:
+        """Fetch user avatar URL from Jira API"""
+        try:
+            # Jira API endpoint to get user information
+            url = f"{settings.JIRA_BASE_URL}/rest/api/3/user"
+
+            # Set up headers with access token
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Accept": "application/json"
+            }
+
+            # Make request to Jira API
+            async with ClientSession() as session:
+                async with session.get(url, headers=headers, params={"accountId": account_id}) as response:
+                    if response.status == 200:
+                        user_data = await response.json()
+                        # Extract avatar URL from response
+                        if user_data and "avatarUrls" in user_data and "48x48" in user_data["avatarUrls"]:
+                            return str(user_data["avatarUrls"]["48x48"])
+                        return None
+                    else:
+                        log.error(f"Failed to fetch Jira user avatar: {response.status}")
+                        return None
+        except Exception as e:
+            log.error(f"Error fetching Jira user avatar: {e}")
+            return None
 
     async def logout(self, user_id: int) -> None:
         """Handle user logout"""

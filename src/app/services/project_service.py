@@ -151,7 +151,8 @@ class ProjectService:
                             name=jira_user.name,
                             is_active=False,
                             jira_account_id=jira_user.jira_account_id,
-                            is_jira_linked=True
+                            is_jira_linked=True,
+                            is_system_user=False,  # Users created from Jira sync are not system users
                         )
                     )
                     log.info(f"Created new inactive user from Jira: {jira_user.email}")

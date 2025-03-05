@@ -13,8 +13,10 @@ class UserResponse(BaseResponse):
     is_active: bool
     created_at: datetime
     is_jira_linked: bool
+    is_system_user: bool
     permission_names: List[str]
     project_roles: List[Dict[str, Any]] = []
+    avatar_url: Optional[str] = None
 
     @classmethod
     def from_domain(cls, user: User) -> "UserResponse":
@@ -40,7 +42,9 @@ class UserResponse(BaseResponse):
             is_active=user.is_active,
             created_at=user.created_at,
             is_jira_linked=user.is_jira_linked,
+            is_system_user=user.is_system_user,
             permission_names=[
                 p.name for p in user.system_role.permissions] if user.system_role and user.system_role.permissions else [],
-            project_roles=project_roles
+            project_roles=project_roles,
+            avatar_url=user.avatar_url
         )

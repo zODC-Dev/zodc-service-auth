@@ -113,6 +113,7 @@ class SQLAlchemyUserRepository(IUserRepository):
             user_project_roles=user_project_roles,
             is_jira_linked=user.is_jira_linked,
             jira_account_id=user.jira_account_id,
+            avatar_url=user.avatar_url
         )
 
     async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[UserEntity]:

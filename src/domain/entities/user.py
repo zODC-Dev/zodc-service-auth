@@ -18,6 +18,7 @@ class User(BaseEntity):
     microsoft_id: Optional[str] = None
     jira_account_id: Optional[str] = None
     is_jira_linked: bool = False
+    is_system_user: bool = True  # Default to True for users who log in
     user_project_roles: Optional[List["UserProjectRole"]] = []
     # System-wide role
     system_role: Optional["Role"] = None
@@ -25,6 +26,7 @@ class User(BaseEntity):
     jira_refresh_token: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = None
+    avatar_url: Optional[str] = None  # User's avatar URL from Jira
 
     # Microsoft tokens
     microsoft_access_token: Optional[str] = None
@@ -41,6 +43,8 @@ class UserCreate(BaseModel):
     is_active: bool = True
     jira_account_id: Optional[str] = None
     is_jira_linked: bool = False
+    is_system_user: bool = True  # Default to True for users who log in
+    avatar_url: Optional[str] = None  # User's avatar URL from Jira
 
 
 class UserUpdate(BaseModel):
@@ -48,6 +52,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     jira_account_id: Optional[str] = None
     is_jira_linked: Optional[bool] = None
+    avatar_url: Optional[str] = None  # User's avatar URL from Jira
 
 
 class UserWithPassword(User):
