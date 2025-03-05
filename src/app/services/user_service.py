@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from src.domain.entities.user import User
 from src.domain.exceptions.user_exceptions import (
@@ -51,3 +51,15 @@ class UserService:
         """Validate user update data"""
         allowed_fields = {"name", "email", "is_active"}
         return all(key in allowed_fields for key in update_data.keys())
+
+    async def get_users_by_ids(self, user_ids: List[int]) -> List[User]:
+        """Get multiple users by their IDs"""
+        users = []
+        for user_id in user_ids:
+            try:
+                user = await self.get_current_user(user_id)
+                users.append(user)
+            except Exception:
+                # Skip users that can't be retrieved
+                continue
+        return users
