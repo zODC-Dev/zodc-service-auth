@@ -12,6 +12,7 @@ class Project(BaseEntity):
     name: str
     key: str
     description: Optional[str] = None
+    avatar_url: Optional[str] = None
     user_project_roles: List["UserProjectRole"] = []
 
     class Config:
@@ -22,6 +23,7 @@ class ProjectCreate(BaseModel):
     name: str
     key: str
     description: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):

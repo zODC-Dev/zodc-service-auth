@@ -82,7 +82,8 @@ class ProjectService:
             ProjectCreate(
                 key=project_data.key,
                 name=project_data.name,
-                description=project_data.description
+                description=project_data.description,
+                avatar_url=project_data.avatar_url
             )
         )
         if not new_project.id:
@@ -92,7 +93,7 @@ class ProjectService:
         await self.role_repository.assign_project_role_to_user(
             user_id=current_user_id,
             project_id=new_project.id,
-            role_name="product_owner"
+            role_name="project_product_owner"
         )
 
         # Publish project linked event to NATS
@@ -150,7 +151,8 @@ class ProjectService:
                             name=jira_user.name,
                             is_active=False,
                             jira_account_id=jira_user.jira_account_id,
-                            is_jira_linked=True
+                            is_jira_linked=True,
+                            is_system_user=False,  # Users created from Jira sync are not system users
                         )
                     )
                     log.info(f"Created new inactive user from Jira: {jira_user.email}")

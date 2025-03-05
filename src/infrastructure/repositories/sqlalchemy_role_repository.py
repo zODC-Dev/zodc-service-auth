@@ -72,7 +72,9 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             email=user.email,
             name=user.name,
             created_at=user.created_at,
-            updated_at=user.updated_at
+            updated_at=user.updated_at,
+            avatar_url=user.avatar_url,
+            is_system_user=user.is_system_user
         )
 
     def _to_domain_role(self, role: Role) -> RoleEntity:

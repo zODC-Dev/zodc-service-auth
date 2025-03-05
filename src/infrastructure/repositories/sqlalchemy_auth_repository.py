@@ -46,6 +46,7 @@ class SQLAlchemyAuthRepository(IAuthRepository):
             email=microsoft_identity.email,
             name=microsoft_identity.name or microsoft_identity.email,
             is_active=True,
+            is_system_user=True,  # Users who log in via Microsoft are system users
         )
         self.session.add(new_user)
         await self.session.commit()

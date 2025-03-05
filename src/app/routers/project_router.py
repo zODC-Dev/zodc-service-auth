@@ -10,15 +10,15 @@ from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCrea
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
+    ProjectAssigneeResponse,
     ProjectResponse,
-    ProjectUserWithRoleResponse,
 )
 from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
 
-@router.post("/", response_model=StandardResponse[ProjectResponse])
+@router.post("", response_model=StandardResponse[ProjectResponse])
 async def create_project(
     request: Request,
     project_data: ProjectCreateRequest,
@@ -43,7 +43,7 @@ async def get_all_projects(
     request: Request,
     controller: ProjectController = Depends(get_project_controller),
     auth_data=require_auth(
-        system_roles=[SystemRoles.USER]
+        system_roles=[SystemRoles.PRODUCT_OWNER]
     )
 ):
     """Get all projects."""
@@ -96,7 +96,7 @@ async def link_jira_project(
 
 @router.get(
     "/{project_id}/users/all",
-    response_model=StandardResponse[List[ProjectUserWithRoleResponse]],
+    response_model=StandardResponse[List[ProjectAssigneeResponse]],
     summary="Get all users in a project with their roles"
 )
 async def get_project_users_with_roles(

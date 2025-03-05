@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     JWT_PUBLIC_KEY_PATH: str = "keys/jwt-public.pem"
     JWT_ISSUER: str = "zodc-service-auth"
 
+    # Jira settings
+    JIRA_BASE_URL: str
+
     class Config:
         """Configuration settings."""
 
