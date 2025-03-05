@@ -18,7 +18,7 @@ from src.domain.constants.roles import SystemRoles
 router = APIRouter()
 
 
-@router.post("/", response_model=StandardResponse[ProjectResponse])
+@router.post("", response_model=StandardResponse[ProjectResponse])
 async def create_project(
     request: Request,
     project_data: ProjectCreateRequest,
