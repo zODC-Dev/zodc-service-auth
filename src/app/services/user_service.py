@@ -17,7 +17,7 @@ class UserService:
         self.cache_ttl = timedelta(minutes=5)
 
     async def get_current_user(self, user_id: int) -> User:
-        """Get current user information"""
+        """Get current user information with project roles and permissions"""
         cache_key = f"user:{user_id}"
 
         # Try to get from cache
@@ -25,7 +25,7 @@ class UserService:
         if cached_user:
             return User.model_validate(cached_user)
 
-        # Get from database
+        # Get from database with project roles and permissions
         user = await self.user_repository.get_user_by_id(user_id)
         if not user:
             raise UserNotFoundError(f"User with id {user_id} not found")

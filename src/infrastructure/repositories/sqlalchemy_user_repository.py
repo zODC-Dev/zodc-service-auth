@@ -14,6 +14,7 @@ from src.infrastructure.models.permission import Permission as PermissionModel
 from src.infrastructure.models.role import Role as RoleModel
 from src.infrastructure.models.role_permission import RolePermission as RolePermissionModel
 from src.infrastructure.models.user import User as UserModel
+from src.infrastructure.models.user_project_role import UserProjectRole as UserProjectRoleModel
 
 
 class SQLAlchemyUserRepository(IUserRepository):
@@ -28,44 +29,77 @@ class SQLAlchemyUserRepository(IUserRepository):
         self.redis_service = redis_service
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserEntity]:
-        result = await self.session.exec(
-            select(UserModel, RoleModel, PermissionModel).join(RoleModel, col(UserModel.role_id) == col(RoleModel.id)).join(
-                RolePermissionModel, col(RoleModel.id) == col(RolePermissionModel.role_id)).join(
-                PermissionModel, col(RolePermissionModel.permission_id) == col(PermissionModel.id)).where(UserModel.id == user_id)
+        # Load user with system role and permissions
+        stmt = (
+            select(UserModel)
+            .options(
+                selectinload(UserModel.system_role).selectinload(  # type: ignore
+                    RoleModel.permissions),  # type: ignore
+                selectinload(UserModel.user_project_roles).selectinload(UserProjectRoleModel.role).selectinload(  # type: ignore
+                    RoleModel.permissions),  # type: ignore
+                selectinload(UserModel.user_project_roles).selectinload(UserProjectRoleModel.project)  # type: ignore
+            )
+            .where(UserModel.id == int(user_id))
         )
-        results = result.all()
+        result = await self.session.exec(stmt)
+        user = result.first()
 
-        if not results:
+        if not user:
             return None
 
-        user = results[0][0]  # First user from first result
-        role = results[0][1]  # First role from first result
-
-        # Collect all permissions from all results
-        permissions = [{"id": row[2].id, "name": row[2].name, "description": row[2].description} for row in results]
-
         # Create a simplified system_role without nested relationships
-        system_role = {
-            "id": role.id,
-            "name": role.name,
-            "description": role.description,
-            "is_system_role": role.is_system_role,
-            "is_active": role.is_active,
-            "created_at": role.created_at,
-            "updated_at": role.updated_at,
-            "permissions": permissions
-        }
+        system_role = None
+        if user.system_role:
+            system_role = {
+                "id": user.system_role.id,
+                "name": user.system_role.name,
+                "description": user.system_role.description,
+                "is_system_role": user.system_role.is_system_role,
+                "is_active": user.system_role.is_active,
+                "created_at": user.system_role.created_at,
+                "updated_at": user.system_role.updated_at,
+                "permissions": [
+                    {"id": p.id, "name": p.name, "description": p.description}
+                    for p in user.system_role.permissions
+                ] if user.system_role.permissions else []
+            }
 
-        # Create simplified user_project_roles without nested relationships
+        # Create simplified user_project_roles with project and role information
         user_project_roles = []
         if user.user_project_roles:
             for upr in user.user_project_roles:
+                project = None
+                if upr.project:
+                    project = {
+                        "id": upr.project.id,
+                        "name": upr.project.name,
+                        "key": upr.project.key,
+                        "description": upr.project.description,
+                        "avatar_url": upr.project.avatar_url
+                    }
+
+                role = None
+                if upr.role:
+                    role = {
+                        "id": upr.role.id,
+                        "name": upr.role.name,
+                        "description": upr.role.description,
+                        "is_system_role": upr.role.is_system_role,
+                        "is_active": upr.role.is_active,
+                        "permissions": [
+                            {"id": p.id, "name": p.name, "description": p.description}
+                            for p in upr.role.permissions
+                        ] if upr.role.permissions else []
+                    }
+
                 user_project_roles.append({
                     "user_id": upr.user_id,
                     "project_id": upr.project_id,
                     "role_id": upr.role_id,
                     "created_at": upr.created_at,
-                    "updated_at": upr.updated_at
+                    "updated_at": upr.updated_at,
+                    "project": project,
+                    "role": role
                 })
 
         return UserEntity(
