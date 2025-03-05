@@ -170,6 +170,7 @@ class AuthService:
                 "user_id": user.id,
                 "jira_account_id": jira_account_id,
                 "email": user.email,
+                "is_system_user": user.is_system_user,
                 "access_token": jira_info.access_token,
                 "refresh_token": jira_info.refresh_token,
                 "expires_in": jira_info.expires_in,
