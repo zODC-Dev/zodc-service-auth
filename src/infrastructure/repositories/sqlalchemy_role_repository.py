@@ -697,6 +697,8 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     name=user.name,
                     email=user.email,
                     is_active=user.is_active,
+                    is_system_user=user.is_system_user,
+                    avatar_url=user.avatar_url,
                     created_at=user.created_at,
                     updated_at=user.updated_at
                 )

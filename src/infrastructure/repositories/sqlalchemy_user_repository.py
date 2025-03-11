@@ -175,6 +175,8 @@ class SQLAlchemyUserRepository(IUserRepository):
             user_project_roles=user_project_roles,
             is_jira_linked=user.is_jira_linked,
             jira_account_id=user.jira_account_id,
+            is_system_user=user.is_system_user,
+            avatar_url=user.avatar_url,
         )
 
     async def get_user_by_email(self, email: str) -> Optional[UserEntity]:
@@ -301,6 +303,8 @@ class SQLAlchemyUserRepository(IUserRepository):
             user_project_roles=user_project_roles,
             is_jira_linked=db_user.is_jira_linked,
             jira_account_id=db_user.jira_account_id,
+            is_system_user=db_user.is_system_user,
+            avatar_url=db_user.avatar_url,
         )
 
     def _to_domain_with_password(self, db_user: UserModel) -> UserWithPassword:
