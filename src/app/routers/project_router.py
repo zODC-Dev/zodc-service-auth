@@ -99,7 +99,7 @@ async def link_jira_project(
     response_model=StandardResponse[List[ProjectAssigneeResponse]],
     summary="Get all users in a project with their roles"
 )
-async def get_project_users_with_roles(
+async def get_project_assignees(
     request: Request,
     project_id: int,
     search: Optional[str] = None,
@@ -116,7 +116,7 @@ async def get_project_users_with_roles(
     Returns:
         List of users with their roles in the project
     """
-    return await controller.get_project_users_with_roles(
+    return await controller.get_project_assignees(
         project_id=project_id,
         search=search
     )

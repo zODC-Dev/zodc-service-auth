@@ -59,7 +59,7 @@ class ProjectUserWithRole(BaseResponse):
             email=user_project_role.user.email if user_project_role.user else None,
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
-            role_name=user_project_role.role.name if user_project_role.role else None
+            role_name=user_project_role.role.description if user_project_role.role else None
         )
 
 

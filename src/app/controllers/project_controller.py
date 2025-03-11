@@ -8,6 +8,7 @@ from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
     ProjectAssigneeResponse,
     ProjectResponse,
+    ProjectUserWithRole,
 )
 from src.app.services.project_service import ProjectService
 from src.domain.entities.project import ProjectCreate, ProjectUpdate
@@ -101,7 +102,7 @@ class ProjectController:
         except (ProjectError, UnauthorizedError) as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
-    async def get_project_users_with_roles(
+    async def get_project_assignees(
         self,
         project_id: int,
         search: Optional[str] = None
@@ -165,7 +166,7 @@ class ProjectController:
             return StandardResponse(
                 message="Users retrieved successfully",
                 data=PaginatedProjectUsersWithRolesResponse(
-                    items=[ProjectAssigneeResponse.from_domain(upr) for upr in user_project_roles],
+                    items=[ProjectUserWithRole.from_domain(upr) for upr in user_project_roles],
                     total=total,
                     page=page,
                     page_size=page_size,
