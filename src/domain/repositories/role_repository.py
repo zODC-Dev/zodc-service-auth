@@ -123,7 +123,7 @@ class IRoleRepository(ABC):
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = None,
-        role_name: Optional[str] = None
+        role_id: Optional[int] = None
     ) -> Tuple[List[UserProjectRole], int]:
         """Get paginated, filtered and sorted user role assignments for a project"""
         pass

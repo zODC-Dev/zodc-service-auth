@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from pydantic import Field
+
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.project import Project
 from src.domain.entities.user_project_role import UserProjectRole
@@ -49,17 +51,24 @@ class ProjectUserWithRole(BaseResponse):
     email: str
     is_system_user: bool
     avatar_url: Optional[str] = None
-    role_name: Optional[str] = None
+    role_ids: List[int] = Field(default_factory=list)
 
     @classmethod
     def from_domain(cls, user_project_role: UserProjectRole) -> 'ProjectUserWithRole':
+        # Extract role IDs from the roles list
+        role_ids = []
+        if hasattr(user_project_role, 'roles') and user_project_role.roles:
+            role_ids = [role.id for role in user_project_role.roles]
+        elif user_project_role.role:
+            role_ids = [user_project_role.role.id]
+
         return cls(
             id=user_project_role.user.id if user_project_role.user else None,
             name=user_project_role.user.name if user_project_role.user else None,
             email=user_project_role.user.email if user_project_role.user else None,
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
-            role_name=user_project_role.role.description if user_project_role.role else None
+            role_ids=role_ids
         )
 
 

@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import BaseEntity
 
@@ -23,6 +23,7 @@ class UserProjectRole(BaseEntity):
     user: Optional["User"] = None
     project: Optional["Project"] = None
     role: Optional["Role"] = None
+    roles: List["Role"] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
