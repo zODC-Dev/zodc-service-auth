@@ -211,27 +211,30 @@ async def get_project_roles(
     )
 
 
-@router.post("/projects/{project_id}",
-             responses={
-                 400: {"description": "Project not found or invalid role assignments or user not found"},
-                 500: {"description": "Internal server error"}
-             }, response_model=StandardResponse[None])
+@router.post("/projects/assign", response_model=StandardResponse[None])
 async def assign_project_role(
     request: Request,
-    project_id: int,
-    assignment: AssignProjectRoleRequest,
+    assign_request: AssignProjectRoleRequest,
     controller: RoleController = Depends(get_role_controller)
 ):
-    """Assign or update role for a user in a project.
+    """Assign project roles to a user.
+
+    This will remove all existing roles for the user in this project and assign the new roles.
 
     Args:
         request: FastAPI request object
         project_id: ID of the project
-        assignment: Role assignment
+        assign_request: Request containing user_id and role_ids
         controller: Role controller instance
+
+    Returns:
+        Success message
     """
-    await controller.assign_project_role(project_id, assignment)
-    return StandardResponse(message="Role assigned successfully", data=None)
+    return await controller.assign_project_roles(
+        project_id=assign_request.project_id,
+        user_id=assign_request.user_id,
+        role_ids=assign_request.role_ids
+    )
 
 
 @router.get(

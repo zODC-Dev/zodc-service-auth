@@ -733,3 +733,71 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             paginated_user_project_roles = user_project_roles[(page-1)*page_size:page*page_size]
 
             return paginated_user_project_roles, total
+
+    async def remove_user_project_roles(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> None:
+        """Remove all roles for a user in a project.
+
+        Args:
+            user_id: ID of the user
+            project_id: ID of the project
+        """
+        async with self.session as session:
+            delete_stmt = delete(UserProjectRole).where(
+                col(UserProjectRole.user_id) == user_id,
+                col(UserProjectRole.project_id) == project_id
+            )
+            await session.exec(delete_stmt)  # type: ignore
+            await session.commit()
+
+    async def create_user_project_role(
+        self,
+        user_id: int,
+        project_id: int,
+        role_id: int
+    ) -> None:
+        """Assign a project role to a user.
+
+        Args:
+            user_id: ID of the user
+            project_id: ID of the project
+            role_id: ID of the role
+        """
+        async with self.session as session:
+            user_project_role = UserProjectRole(
+                user_id=user_id,
+                project_id=project_id,
+                role_id=role_id
+            )
+            session.add(user_project_role)
+            await session.commit()
+
+    async def get_role_by_id(self, role_id: int) -> Optional[RoleEntity]:
+        """Get a role by its ID.
+
+        Args:
+            role_id: ID of the role to retrieve
+
+        Returns:
+            The role entity if found, None otherwise
+        """
+        async with self.session as session:
+            query = select(Role).where(Role.id == role_id)
+            result = await session.exec(query)
+            role = result.first()
+
+            if not role:
+                return None
+
+            return RoleEntity(
+                id=role.id,
+                name=role.name,
+                description=role.description,
+                is_active=role.is_active,
+                is_system_role=role.is_system_role,
+                created_at=role.created_at,
+                updated_at=role.updated_at
+            )

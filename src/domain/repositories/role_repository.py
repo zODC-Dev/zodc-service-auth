@@ -29,6 +29,23 @@ class IRoleRepository(ABC):
         pass
 
     @abstractmethod
+    async def remove_user_project_roles(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> None:
+        pass
+
+    @abstractmethod
+    async def create_user_project_role(
+        self,
+        user_id: int,
+        project_id: int,
+        role_id: int
+    ) -> None:
+        pass
+
+    @abstractmethod
     async def assign_system_role_to_user(
         self,
         user_id: int,
@@ -43,6 +60,7 @@ class IRoleRepository(ABC):
         project_id: int,
         role_name: str
     ) -> None:
+        """Assign a project role to a user"""
         pass
 
     @abstractmethod
@@ -126,4 +144,9 @@ class IRoleRepository(ABC):
         role_id: Optional[int] = None
     ) -> Tuple[List[UserProjectRole], int]:
         """Get paginated, filtered and sorted user role assignments for a project"""
+        pass
+
+    @abstractmethod
+    async def get_role_by_id(self, role_id: int) -> Optional[Role]:
+        """Get a role by its ID"""
         pass

@@ -49,6 +49,7 @@ class AssignSystemRoleRequest(BaseRequest):
 
 
 class AssignProjectRoleRequest(BaseRequest):
-    user_id: int = Field(..., description="ID of the user")
-    role_name: str = Field(...,
-                           description="Name of the project role to assign")
+    user_id: int = Field(..., description="ID of the user", alias="userId")
+    project_id: int = Field(..., description="ID of the project", alias="projectId")
+    role_ids: List[int] = Field(..., description="List of role IDs to assign",
+                                alias="roleIds")
