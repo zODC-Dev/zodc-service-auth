@@ -136,7 +136,7 @@ class ProjectController:
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = None,
-        role_name: Optional[str] = None
+        role_id: Optional[int] = None
     ) -> StandardResponse[PaginatedProjectUsersWithRolesResponse]:
         """Get users in a project with their roles with pagination, filtering, searching, and sorting
 
@@ -145,9 +145,9 @@ class ProjectController:
             page: Page number (starts at 1)
             page_size: Number of items per page
             search: Optional search term to filter users by name or email
-            sort_by: Field to sort by (name, email, role_name)
+            sort_by: Field to sort by (name, email, role_id)
             sort_order: Sort order (asc or desc)
-            role_name: Filter by role name
+            role_id: Filter by role ID
 
         Returns:
             Paginated list of users with their roles in the project
@@ -160,7 +160,7 @@ class ProjectController:
                 search=search,
                 sort_by=sort_by,
                 sort_order=sort_order,
-                role_name=role_name
+                role_id=role_id
             )
 
             return StandardResponse(

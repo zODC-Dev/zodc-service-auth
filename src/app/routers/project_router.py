@@ -134,9 +134,9 @@ async def get_project_users_with_roles_paginated(
     page_size: int = Query(10, ge=1, le=100, description="Items per page", alias="pageSize"),
     search: Optional[str] = Query(None, description="Search by user name or email"),
     sort_by: Optional[str] = Query(
-        None, description="Field to sort by (name, email, role_name)", alias="sortBy"),
+        None, description="Field to sort by (name, email, role_id)", alias="sortBy"),
     sort_order: Optional[str] = Query(None, description="Sort order (asc or desc)", alias="sortOrder"),
-    role_name: Optional[str] = Query(None, description="Filter by role name", alias="roleName"),
+    role_id: Optional[int] = Query(None, description="Filter by role ID", alias="roleId"),
     controller: ProjectController = Depends(get_project_controller)
 ):
     """Get users in a project with their roles with pagination, filtering, searching, and sorting.
@@ -147,9 +147,9 @@ async def get_project_users_with_roles_paginated(
         page: Page number (starts at 1)
         page_size: Number of items per page
         search: Optional search term to filter users by name or email
-        sort_by: Field to sort by (name, email, role_name)
+        sort_by: Field to sort by (name, email, role_id)
         sort_order: Sort order (asc or desc)
-        role_name: Filter by role name
+        role_id: Filter by role ID
         controller: Project controller instance
 
     Returns:
@@ -162,5 +162,5 @@ async def get_project_users_with_roles_paginated(
         search=search,
         sort_by=sort_by,
         sort_order=sort_order,
-        role_name=role_name
+        role_id=role_id
     )

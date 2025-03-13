@@ -1,8 +1,8 @@
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from sqlmodel import and_, asc, col, delete, desc, func, or_, select
+from sqlmodel import and_, asc, col, delete, desc, distinct, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.permission import Permission as PermissionEntity
@@ -602,22 +602,9 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         search: Optional[str] = None,
         sort_by: Optional[str] = None,
         sort_order: Optional[str] = None,
-        role_name: Optional[str] = None
+        role_id: Optional[int] = None
     ) -> Tuple[List[UserProjectRoleEntity], int]:
-        """Get users in a project with their roles with pagination, filtering, searching, and sorting
-
-        Args:
-            project_id: The ID of the project
-            page: Page number (starts at 1)
-            page_size: Number of items per page
-            search: Optional search term to filter users by name or email
-            sort_by: Field to sort by (name, email, role_name)
-            sort_order: Sort order (asc or desc)
-            role_name: Filter by role name
-
-        Returns:
-            Tuple containing a list of UserProjectRole objects and the total count
-        """
+        """Get users in a project with their roles with pagination, filtering, searching, and sorting"""
         async with self.session as session:
             # Build the base query
             query = (
@@ -647,12 +634,12 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     )
                 )
 
-            # Apply role name filter if provided
-            if role_name:
-                query = query.where(col(Role.name) == role_name)
+            # Apply role ID filter if provided
+            if role_id:
+                query = query.where(col(Role.id) == role_id)
 
             # Get total count before pagination and sorting
-            count_query = select(func.count()).select_from(query.subquery())
+            count_query = select(func.count(distinct(UserProjectRole.user_id))).select_from(query.subquery())
             total = await session.scalar(count_query)
 
             if total is None or total == 0:
@@ -668,8 +655,8 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     order_column = User.name
                 elif sort_by == "email":
                     order_column = User.email
-                elif sort_by == "role_name":
-                    order_column = Role.name
+                elif sort_by == "role_id":
+                    order_column = Role.id  # type: ignore
                 else:
                     # Default sort by user name
                     order_column = User.name
@@ -682,27 +669,39 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 # Default sort by user name ascending
                 query = query.order_by(col(User.name).asc())
 
-            # Apply pagination
-            query = query.offset((page - 1) * page_size).limit(page_size)
-
-            # Execute the query
+            # Execute the query without pagination first to get all roles
             result = await session.exec(query)
-            rows = result.all()
+            all_rows = result.all()
 
-            # Convert to domain entities
-            user_project_roles = []
-            for upr, user, role in rows:
-                domain_user = UserEntity(
-                    id=user.id,
-                    name=user.name,
-                    email=user.email,
-                    is_active=user.is_active,
-                    is_system_user=user.is_system_user,
-                    avatar_url=user.avatar_url,
-                    created_at=user.created_at,
-                    updated_at=user.updated_at
-                )
+            # Group by user_id to collect all roles for each user
+            user_roles_map: Dict[int, Dict[str, Any]] = {}
+            for upr, user, role in all_rows:
+                if not user.id or not role.id:
+                    continue
 
+                if user.id not in user_roles_map:
+                    # Initialize user data
+                    domain_user = UserEntity(
+                        id=user.id,
+                        name=user.name,
+                        email=user.email,
+                        is_active=user.is_active,
+                        is_system_user=user.is_system_user,
+                        avatar_url=user.avatar_url,
+                        created_at=user.created_at,
+                        updated_at=user.updated_at
+                    )
+
+                    # Create a new UserProjectRoleEntity with empty roles list
+                    user_roles_map[user.id] = {
+                        'user': domain_user,
+                        'roles': [],
+                        'project_id': upr.project_id,
+                        'created_at': upr.created_at,
+                        'updated_at': upr.updated_at
+                    }
+
+                # Add role to the user's roles list
                 domain_role = RoleEntity(
                     id=role.id,
                     name=role.name,
@@ -712,18 +711,93 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     created_at=role.created_at,
                     updated_at=role.updated_at
                 )
+                user_roles_map[user.id]['roles'].append(domain_role)
 
+            # Convert the map to a list of UserProjectRoleEntity objects
+            user_project_roles = []
+            for user_id, data in user_roles_map.items():
                 domain_upr = UserProjectRoleEntity(
-                    id=upr.id,
-                    user_id=upr.user_id,
-                    project_id=upr.project_id,
-                    role_id=upr.role_id,
-                    user=domain_user,
-                    role=domain_role,
-                    created_at=upr.created_at,
-                    updated_at=upr.updated_at
+                    id=0,  # This is a synthetic ID since we're grouping
+                    user_id=user_id,
+                    project_id=data['project_id'],
+                    role_id=0,  # This field is not used in this context
+                    user=data['user'],
+                    role=None,  # Not using single role anymore
+                    roles=data['roles'],  # Add the list of roles
+                    created_at=data['created_at'],
+                    updated_at=data['updated_at']
                 )
-
                 user_project_roles.append(domain_upr)
 
-            return user_project_roles, total
+            # Apply pagination to the grouped results
+            paginated_user_project_roles = user_project_roles[(page-1)*page_size:page*page_size]
+
+            return paginated_user_project_roles, total
+
+    async def remove_user_project_roles(
+        self,
+        user_id: int,
+        project_id: int
+    ) -> None:
+        """Remove all roles for a user in a project.
+
+        Args:
+            user_id: ID of the user
+            project_id: ID of the project
+        """
+        async with self.session as session:
+            delete_stmt = delete(UserProjectRole).where(
+                col(UserProjectRole.user_id) == user_id,
+                col(UserProjectRole.project_id) == project_id
+            )
+            await session.exec(delete_stmt)  # type: ignore
+            await session.commit()
+
+    async def create_user_project_role(
+        self,
+        user_id: int,
+        project_id: int,
+        role_id: int
+    ) -> None:
+        """Assign a project role to a user.
+
+        Args:
+            user_id: ID of the user
+            project_id: ID of the project
+            role_id: ID of the role
+        """
+        async with self.session as session:
+            user_project_role = UserProjectRole(
+                user_id=user_id,
+                project_id=project_id,
+                role_id=role_id
+            )
+            session.add(user_project_role)
+            await session.commit()
+
+    async def get_role_by_id(self, role_id: int) -> Optional[RoleEntity]:
+        """Get a role by its ID.
+
+        Args:
+            role_id: ID of the role to retrieve
+
+        Returns:
+            The role entity if found, None otherwise
+        """
+        async with self.session as session:
+            query = select(Role).where(Role.id == role_id)
+            result = await session.exec(query)
+            role = result.first()
+
+            if not role:
+                return None
+
+            return RoleEntity(
+                id=role.id,
+                name=role.name,
+                description=role.description,
+                is_active=role.is_active,
+                is_system_role=role.is_system_role,
+                created_at=role.created_at,
+                updated_at=role.updated_at
+            )

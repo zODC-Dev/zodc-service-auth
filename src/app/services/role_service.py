@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.app.schemas.requests.role import AssignProjectRoleRequest, RoleCreateRequest, RoleUpdateRequest
+from src.app.schemas.requests.role import RoleCreateRequest, RoleUpdateRequest
 from src.domain.entities.role import Role, RoleCreate as DomainRoleCreate, RoleUpdate as DomainRoleUpdate
 from src.domain.entities.user_project_role import UserProjectRole
 from src.domain.exceptions.project_exceptions import ProjectNotFoundError
 from src.domain.exceptions.role_exceptions import (
     InvalidPermissionIdsError,
     RoleError,
-    RoleIsSystemRoleError,
     RoleNotFoundError,
 )
 from src.domain.exceptions.user_exceptions import UserNotFoundError
@@ -142,35 +141,35 @@ class RoleService:
             search=search
         )
 
-    async def assign_project_role(self, project_id: int, assignment: AssignProjectRoleRequest) -> None:
-        """Assign or update roles for multiple users in a project"""
-        # Verify project exists
-        project = await self.project_repository.get_project_by_id(project_id)
-        if not project:
-            raise ProjectNotFoundError(
-                f"Project with id {project_id} not found")
+    # async def assign_project_role(self, project_id: int, assignment: AssignProjectRoleRequest) -> None:
+    #     """Assign or update roles for multiple users in a project"""
+    #     # Verify project exists
+    #     project = await self.project_repository.get_project_by_id(project_id)
+    #     if not project:
+    #         raise ProjectNotFoundError(
+    #             f"Project with id {project_id} not found")
 
-        # Verify role exists
-        role = await self.role_repository.get_role_by_name(assignment.role_name)
-        if not role:
-            raise RoleNotFoundError(role_name=assignment.role_name)
+    #     # Verify role exists
+    #     role = await self.role_repository.get_role_by_name(assignment.role_name)
+    #     if not role:
+    #         raise RoleNotFoundError(role_name=assignment.role_name)
 
-        # Verify role is not system role
-        if role.is_system_role:
-            raise RoleIsSystemRoleError(assignment.role_name)
+    #     # Verify role is not system role
+    #     if role.is_system_role:
+    #         raise RoleIsSystemRoleError(assignment.role_name)
 
-        # Verify user exists
-        user = await self.user_repository.get_user_by_id(assignment.user_id)
-        if not user:
-            raise UserNotFoundError(
-                f"User with id {assignment.user_id} not found")
+    #     # Verify user exists
+    #     user = await self.user_repository.get_user_by_id(assignment.user_id)
+    #     if not user:
+    #         raise UserNotFoundError(
+    #             f"User with id {assignment.user_id} not found")
 
-        # Assign role
-        await self.role_repository.assign_project_role_to_user(
-            user_id=assignment.user_id,
-            project_id=project_id,
-            role_name=assignment.role_name
-        )
+    #     # Assign role
+    #     await self.role_repository.assign_project_role_to_user(
+    #         user_id=assignment.user_id,
+    #         project_id=project_id,
+    #         role_name=assignment.role_name
+    #     )
 
     async def get_system_roles(
         self,
@@ -207,3 +206,53 @@ class RoleService:
             is_system_role=None
         )
         return roles
+
+    async def assign_project_roles(
+        self,
+        project_id: int,
+        user_id: int,
+        role_ids: List[int]
+    ) -> None:
+        """Assign project roles to a user.
+
+        This will remove all existing roles for the user in this project and assign the new roles.
+
+        Args:
+            project_id: ID of the project
+            user_id: ID of the user
+            role_ids: List of role IDs to assign
+
+        Raises:
+            UserNotFoundError: If the user doesn't exist
+            ProjectNotFoundError: If the project doesn't exist
+            RoleNotFoundError: If any of the roles don't exist
+        """
+        # Check if user exists
+        user = await self.user_repository.get_user_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User with id {user_id} not found")
+
+        # Check if project exists
+        project = await self.project_repository.get_project_by_id(project_id)
+        if not project:
+            raise ProjectNotFoundError(f"Project with id {project_id} not found")
+
+        # Check if all roles exist
+        for role_id in role_ids:
+            role = await self.role_repository.get_role_by_id(role_id)
+            if not role:
+                raise RoleNotFoundError(role_id=role_id)
+
+        # Remove all existing roles for this user in this project
+        await self.role_repository.remove_user_project_roles(
+            user_id=user_id,
+            project_id=project_id
+        )
+
+        # Assign new roles
+        for role_id in role_ids:
+            await self.role_repository.create_user_project_role(
+                user_id=user_id,
+                project_id=project_id,
+                role_id=role_id
+            )

@@ -3,7 +3,6 @@ from typing import List, Optional
 from fastapi import HTTPException
 
 from src.app.schemas.requests.role import (
-    AssignProjectRoleRequest,
     AssignSystemRoleRequest,
     RoleCreateRequest,
     RoleUpdateRequest,
@@ -22,7 +21,6 @@ from src.domain.exceptions.project_exceptions import ProjectNotFoundError
 from src.domain.exceptions.role_exceptions import (
     RoleAlreadyExistsError,
     RoleError,
-    RoleIsSystemRoleError,
     RoleNotFoundError,
 )
 from src.domain.exceptions.user_exceptions import UserNotFoundError
@@ -145,13 +143,13 @@ class RoleController:
         except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-    async def assign_project_role(self, project_id: int, assignment: AssignProjectRoleRequest) -> None:
-        try:
-            await self.role_service.assign_project_role(project_id, assignment)
-        except (ProjectNotFoundError, RoleNotFoundError, UserNotFoundError, RoleIsSystemRoleError) as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        except RoleError as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+    # async def assign_project_role(self, project_id: int, assignment: AssignProjectRoleRequest) -> None:
+    #     try:
+    #         await self.role_service.assign_project_role(project_id, assignment)
+    #     except (ProjectNotFoundError, RoleNotFoundError, UserNotFoundError, RoleIsSystemRoleError) as e:
+    #         raise HTTPException(status_code=400, detail=str(e)) from e
+    #     except RoleError as e:
+    #         raise HTTPException(status_code=500, detail=str(e)) from e
 
     async def get_system_roles(
         self,
@@ -199,4 +197,36 @@ class RoleController:
                 data=[RoleResponse.from_domain(role) for role in roles]
             )
         except RoleError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    async def assign_project_roles(
+        self,
+        project_id: int,
+        user_id: int,
+        role_ids: List[int]
+    ) -> StandardResponse[None]:
+        """Assign project roles to a user.
+
+        This will remove all existing roles for the user in this project and assign the new roles.
+
+        Args:
+            project_id: ID of the project
+            user_id: ID of the user
+            role_ids: List of role IDs to assign
+
+        Returns:
+            Success message
+        """
+        try:
+            await self.role_service.assign_project_roles(
+                project_id=project_id,
+                user_id=user_id,
+                role_ids=role_ids
+            )
+            return StandardResponse(
+                message="Project roles assigned successfully"
+            )
+        except (UserNotFoundError, ProjectNotFoundError, RoleNotFoundError) as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
