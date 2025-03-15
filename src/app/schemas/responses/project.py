@@ -45,22 +45,45 @@ class ProjectAssigneeResponse(BaseResponse):
         )
 
 
+class RoleInfo(BaseResponse):
+    id: int
+    name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    is_system_role: bool = False
+
+
 class ProjectUserWithRole(BaseResponse):
     id: int
     name: str
     email: str
     is_system_user: bool
     avatar_url: Optional[str] = None
-    role_ids: List[int] = Field(default_factory=list)
+    roles: List[RoleInfo] = Field(default_factory=list)
 
     @classmethod
     def from_domain(cls, user_project_role: UserProjectRole) -> 'ProjectUserWithRole':
-        # Extract role IDs from the roles list
-        role_ids = []
+        roles = []
         if hasattr(user_project_role, 'roles') and user_project_role.roles:
-            role_ids = [role.id for role in user_project_role.roles]
+            roles = [
+                RoleInfo(
+                    id=role.id,
+                    name=role.name,
+                    description=role.description,
+                    is_active=role.is_active,
+                    is_system_role=role.is_system_role
+                ) for role in user_project_role.roles
+            ]
         elif user_project_role.role:
-            role_ids = [user_project_role.role.id]
+            roles = [
+                RoleInfo(
+                    id=user_project_role.role.id,
+                    name=user_project_role.role.name,
+                    description=user_project_role.role.description,
+                    is_active=user_project_role.role.is_active,
+                    is_system_role=user_project_role.role.is_system_role
+                )
+            ]
 
         return cls(
             id=user_project_role.user.id if user_project_role.user else None,
@@ -68,7 +91,7 @@ class ProjectUserWithRole(BaseResponse):
             email=user_project_role.user.email if user_project_role.user else None,
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
-            role_ids=role_ids
+            roles=roles
         )
 
 

@@ -676,7 +676,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             # Group by user_id to collect all roles for each user
             user_roles_map: Dict[int, Dict[str, Any]] = {}
             for upr, user, role in all_rows:
-                if not user.id or not role.id:
+                if not user or not user.id:
                     continue
 
                 if user.id not in user_roles_map:
@@ -692,16 +692,16 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                         updated_at=user.updated_at
                     )
 
-                    # Create a new UserProjectRoleEntity with empty roles list
+                    # Create a new entry in the map
                     user_roles_map[user.id] = {
                         'user': domain_user,
-                        'roles': [],
+                        'roles': [],  # Lưu trữ toàn bộ role objects thay vì chỉ role_ids
                         'project_id': upr.project_id,
                         'created_at': upr.created_at,
                         'updated_at': upr.updated_at
                     }
 
-                # Add role to the user's roles list
+                # Add complete role object to the user's roles list
                 domain_role = RoleEntity(
                     id=role.id,
                     name=role.name,
@@ -723,7 +723,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     role_id=0,  # This field is not used in this context
                     user=data['user'],
                     role=None,  # Not using single role anymore
-                    roles=data['roles'],  # Add the list of roles
+                    roles=data['roles'],  # Store the complete role objects
                     created_at=data['created_at'],
                     updated_at=data['updated_at']
                 )
