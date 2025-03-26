@@ -98,15 +98,15 @@ class JWTAuth:
         if not project_id:
             return False
 
-        user_project_roles: Dict[int, str] = payload.get("project_roles", {})
-        project_role: Optional[str] = user_project_roles.get(project_id)
+        user_project_roles: Dict[int, List[str]] = payload.get("project_roles", {})
+        project_roles: List[str] = user_project_roles.get(project_id, [])
 
-        if not project_role:
+        if not project_roles:
             return False
 
         if self.require_all_roles:
-            return all(role == project_role for role in self.required_project_roles)
-        return project_role in self.required_project_roles
+            return all(role in project_roles for role in self.required_project_roles)
+        return any(role in project_roles for role in self.required_project_roles)
 
     def _check_project_permissions(self, payload: Dict[str, Any], request: Request) -> bool:
         """Check if user has required project permissions"""

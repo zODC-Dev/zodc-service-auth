@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # JWT settings
     JWT_ALGORITHM: str = "RS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 3000
 
     # Logging
     LOG_LEVEL: str = "INFO"
