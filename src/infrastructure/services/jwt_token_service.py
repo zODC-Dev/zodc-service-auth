@@ -54,15 +54,21 @@ class JWTTokenService(ITokenService):
             system_permissions = await self.permission_repository.get_system_permissions_by_user_id(user.id)
             project_permissions = await self.permission_repository.get_permissions_of_all_projects_by_user_id(user.id)
 
+            # Build project roles dict mapping project_id -> list of role names
+            project_roles_dict: Dict[int, List[str]] = {}
+            for proj_role in project_roles:
+                project_id = proj_role.project_id
+                role_name = proj_role.role_name
+
+                if project_id not in project_roles_dict:
+                    project_roles_dict[project_id] = []
+
+                project_roles_dict[project_id].append(role_name)
+
             # Build project permissions dict mapping project_id -> permission list
             project_perms_dict: Dict[int, List[str]] = {}
             for proj_perm in project_permissions:
                 project_perms_dict[proj_perm.project_id] = [p.name for p in proj_perm.permissions]
-
-            # Build project roles dict mapping project_id -> role name
-            project_roles_dict: Dict[int, str] = {}
-            for proj_role in project_roles:
-                project_roles_dict[proj_role.project_id] = proj_role.role_name
 
             token_payload = TokenPayload(
                 sub=str(user.id),
