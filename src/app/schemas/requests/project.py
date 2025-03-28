@@ -38,8 +38,8 @@ class ProjectUpdateRequest(BaseRequest):
 
 
 class LinkJiraProjectRequest(BaseRequest):
-    jira_project_id: str
-    key: str
-    name: str
-    description: str
-    avatar_url: Optional[str] = None
+    jira_project_id: str = Field(alias='jiraProjectId')
+    key: str = Field(alias='key')
+    name: str = Field(alias='name')
+    description: str = Field(alias='description')
+    avatar_url: Optional[str] = Field(alias='avatarUrl')

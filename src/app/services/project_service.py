@@ -6,7 +6,11 @@ from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
 from src.domain.entities.user import UserCreate
 from src.domain.entities.user_project_role import UserProjectRole
-from src.domain.events.project_events import JiraUsersRequestEvent, JiraUsersResponseEvent, ProjectJiraLinkedEvent
+from src.domain.events.project_events import (
+    JiraProjectSyncNATSReplyDTO,
+    JiraProjectSyncNATSRequestDTO,
+    JiraUsersResponseEvent,
+)
 from src.domain.exceptions.project_exceptions import (
     ProjectCreateError,
     ProjectKeyAlreadyExistsError,
@@ -96,30 +100,47 @@ class ProjectService:
             role_name="project_product_owner"
         )
 
-        # Publish project linked event to NATS
-        event = ProjectJiraLinkedEvent(
+        # Create Jira project sync request DTO
+        sync_request = JiraProjectSyncNATSRequestDTO(
             project_id=new_project.id,
+            user_id=current_user_id,
+            project_key=project_data.key,
             jira_project_id=project_data.jira_project_id,
-            name=project_data.name,
-            key=project_data.key,
-            avatar_url=project_data.avatar_url
-        )
-        await self.nats_service.publish(
-            NATSPublishTopic.PROJECT_LINKED.value,
-            event.model_dump(mode='json', exclude=None)
+            sync_issues=True,
+            sync_sprints=True,
+            sync_users=True
         )
 
-        # Publish find users event to NATS
-        jira_event = JiraUsersRequestEvent(
-            admin_user_id=current_user_id,
-            project_id=new_project.id,
-            jira_project_id=project_data.jira_project_id,
-            key=project_data.key,
-        )
-        await self.nats_service.publish(
-            NATSPublishTopic.JIRA_USERS_REQUEST.value,
-            jira_event.model_dump(mode='json', exclude=None)
-        )
+        # Publish project sync request to NATS and wait for reply
+        try:
+            reply_data = await self.nats_service.request(
+                NATSPublishTopic.JIRA_PROJECT_SYNC.value,
+                sync_request.model_dump(mode='json', exclude=None),
+                timeout=60
+            )
+
+            # Process reply data
+            reply = JiraProjectSyncNATSReplyDTO.model_validate(reply_data)
+            if not reply.data.success:
+                raise Exception(f"Jira project sync failed: {reply.data.error_message}")
+            else:
+                log.info(f"Jira project sync completed: Issues: {reply.data.sync_summary.synced_issues}/{reply.data.sync_summary.total_issues}, " +
+                         f"Sprints: {reply.data.sync_summary.synced_sprints}/{reply.data.sync_summary.total_sprints}, " +
+                         f"Users: {reply.data.sync_summary.synced_users}/{reply.data.sync_summary.total_users}")
+        except Exception as e:
+            raise Exception(f"Error during Jira project sync: {str(e)}") from e
+
+        # # Publish find users event to NATS
+        # jira_event = JiraUsersRequestEvent(
+        #     admin_user_id=current_user_id,
+        #     project_id=new_project.id,
+        #     jira_project_id=project_data.jira_project_id,
+        #     key=project_data.key,
+        # )
+        # await self.nats_service.publish(
+        #     NATSPublishTopic.JIRA_USERS_REQUEST.value,
+        #     jira_event.model_dump(mode='json', exclude=None)
+        # )
 
         return new_project
 

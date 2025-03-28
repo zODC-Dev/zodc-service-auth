@@ -19,7 +19,20 @@ class JiraSSOService(IJiraSSOService):
         "read:sprint:jira-software",
         "write:sprint:jira-software",
         "read:board-scope:jira-software",
-        "read:project:jira"
+        "write:board-scope:jira-software",
+        "read:issue-details:jira",
+        "read:project:jira",
+        "read:comment:jira",
+        "write:comment:jira",
+        "read:issue-link:jira",
+        "read:issue-link-type:jira",
+        "read:issue:jira",
+        "read:issue-comment:jira",
+        "read:issue-history:jira",
+        "read:issue-type:jira",
+        "read:issue-field:jira",
+        "read:issue-link:jira",
+        "write:issue-link:jira",
     ]
 
     async def generate_jira_auth_url(self) -> str:

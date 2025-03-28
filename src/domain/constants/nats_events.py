@@ -17,6 +17,7 @@ class NATSPublishTopic(str, Enum):
     JIRA_USERS_REQUEST = "project.users.request"
     JIRA_LOGIN = "jira.login"
     MICROSOFT_LOGIN = "microsoft.login"
+    JIRA_PROJECT_SYNC = "jira.project.sync.request"
 
 
 class NATSSubscribeTopic(str, Enum):
