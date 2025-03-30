@@ -39,11 +39,11 @@ class ProjectService:
                 f"Project with key '{project_data.key}' already exists")
         return await self.project_repository.create_project(project_data)
 
-    async def get_project(self, project_id: int) -> Project:
-        project = await self.project_repository.get_project_by_id(project_id)
+    async def get_project(self, project_key: str) -> Project:
+        project = await self.project_repository.get_project_by_key(project_key)
         if not project:
             raise ProjectNotFoundError(
-                f"Project with id {project_id} not found")
+                f"Project with key {project_key} not found")
         return project
 
     async def get_all_projects(self) -> List[Project]:
