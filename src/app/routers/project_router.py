@@ -27,14 +27,14 @@ async def create_project(
     return await controller.create_project(project_data)
 
 
-@router.get("/{project_id}", response_model=StandardResponse[ProjectResponse])
+@router.get("/{project_key}", response_model=StandardResponse[ProjectResponse])
 async def get_project(
     request: Request,
-    project_id: int,
+    project_key: str,
     controller: ProjectController = Depends(get_project_controller)
 ):
-    """Get a project by ID."""
-    return await controller.get_project(project_id)
+    """Get a project by key."""
+    return await controller.get_project(project_key)
 
 
 @router.get("", response_model=StandardResponse[List[ProjectResponse]])

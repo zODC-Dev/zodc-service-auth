@@ -35,9 +35,9 @@ class ProjectController:
         except ProjectError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
-    async def get_project(self, project_id: int) -> StandardResponse[ProjectResponse]:
+    async def get_project(self, project_key: str) -> StandardResponse[ProjectResponse]:
         try:
-            project = await self.project_service.get_project(project_id)
+            project = await self.project_service.get_project(project_key)
             return StandardResponse(
                 message="Project retrieved successfully",
                 data=ProjectResponse.from_domain(project)
