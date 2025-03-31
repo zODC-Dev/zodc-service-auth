@@ -4,6 +4,7 @@ from pydantic import Field
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.project import Project
+from src.domain.entities.user import User
 from src.domain.entities.user_project_role import UserProjectRole
 
 
@@ -42,6 +43,16 @@ class ProjectAssigneeResponse(BaseResponse):
             email=user_project_role.user.email if user_project_role.user else None,
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
+        )
+
+    @classmethod
+    def from_user(cls, user: User) -> 'ProjectAssigneeResponse':
+        return cls(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            is_system_user=user.is_system_user,
+            avatar_url=user.avatar_url
         )
 
 

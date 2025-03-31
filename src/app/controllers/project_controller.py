@@ -104,13 +104,13 @@ class ProjectController:
 
     async def get_project_assignees(
         self,
-        project_id: int,
+        project_key: str,
         search: Optional[str] = None
     ) -> StandardResponse[List[ProjectAssigneeResponse]]:
         """Get all users in a project with their roles
 
         Args:
-            project_id: The ID of the project
+            project_key: The key of the project
             search: Optional search term to filter users by name or email
 
         Returns:
@@ -118,7 +118,7 @@ class ProjectController:
         """
         try:
             user_project_roles = await self.project_service.get_project_users_with_roles(
-                project_id=project_id,
+                project_key=project_key,
                 search=search
             )
             return StandardResponse(

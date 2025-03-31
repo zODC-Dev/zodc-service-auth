@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import col, select, update
+from sqlmodel import col, or_, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
 from src.domain.entities.user import User as UserEntity, UserCreate, UserUpdate, UserWithPassword
+from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.user_event_service import IUserEventService
@@ -345,4 +346,110 @@ class SQLAlchemyUserRepository(IUserRepository):
             user_project_roles=user_project_roles,
             is_jira_linked=db_user.is_jira_linked,
             jira_account_id=db_user.jira_account_id,
+        )
+
+    async def get_users_by_project(
+        self,
+        project_id: int,
+        search: Optional[str] = None
+    ) -> List[UserProjectRoleEntity]:
+        """Get all users in a specific project with their roles"""
+        # Build base query
+        stmt = (
+            select(UserProjectRoleModel)
+            .options(
+                selectinload(UserProjectRoleModel.user),  # type: ignore
+                selectinload(UserProjectRoleModel.role).selectinload(RoleModel.permissions),  # type: ignore
+                selectinload(UserProjectRoleModel.project)  # type: ignore
+            )
+            .where(col(UserProjectRoleModel.project_id) == project_id)
+            .join(UserModel, col(UserProjectRoleModel.user_id) == col(UserModel.id))
+        )
+
+        # Add search condition if provided
+        if search:
+            search_term = f"%{search}%"
+            stmt = stmt.where(
+                or_(
+                    col(UserModel.name).ilike(search_term),
+                    col(UserModel.email).ilike(search_term)
+                )
+            )
+
+        # Execute query
+        result = await self.session.exec(stmt)
+        user_project_roles = result.all()
+
+        # Convert to domain entities
+        return [self._to_domain_user_project_role(upr) for upr in user_project_roles]
+
+    async def get_all_users(
+        self,
+        search: Optional[str] = None
+    ) -> List[UserEntity]:
+        """Get all users in the system with their roles"""
+        # Build base query for users
+        stmt = (
+            select(UserModel)
+            .options(
+                selectinload(UserModel.system_role).selectinload(RoleModel.permissions),  # type: ignore
+                selectinload(UserModel.user_project_roles).selectinload(  # type: ignore
+                    UserProjectRoleModel.role).selectinload(RoleModel.permissions),  # type: ignore
+                selectinload(UserModel.user_project_roles).selectinload(UserProjectRoleModel.project)  # type: ignore
+            )
+        )
+
+        # Add search condition if provided
+        if search:
+            search_term = f"%{search}%"
+            stmt = stmt.where(
+                or_(
+                    col(UserModel.name).ilike(search_term),
+                    col(UserModel.email).ilike(search_term)
+                )
+            )
+
+        # Execute query
+        result = await self.session.exec(stmt)
+        users = result.all()
+
+        return [self._to_domain(user) for user in users]
+
+    def _to_domain_user_project_role(self, upr: UserProjectRoleModel) -> UserProjectRoleEntity:
+        """Convert UserProjectRole model to domain entity"""
+        return UserProjectRoleEntity(
+            user=UserEntity(
+                id=upr.user.id,
+                email=upr.user.email,
+                name=upr.user.name,
+                is_active=upr.user.is_active,
+                created_at=upr.user.created_at,
+                updated_at=upr.user.updated_at,
+                is_system_user=upr.user.is_system_user,
+                is_jira_linked=upr.user.is_jira_linked,
+                avatar_url=upr.user.avatar_url
+            ) if upr.user else None,
+            role={
+                "id": upr.role.id,
+                "name": upr.role.name,
+                "description": upr.role.description,
+                "is_system_role": upr.role.is_system_role,
+                "is_active": upr.role.is_active,
+                "permissions": [
+                    {"id": p.id, "name": p.name, "description": p.description}
+                    for p in upr.role.permissions
+                ] if upr.role.permissions else []
+            } if upr.role else None,
+            project={
+                "id": upr.project.id,
+                "key": upr.project.key,
+                "name": upr.project.name,
+                "description": upr.project.description,
+                "avatar_url": upr.project.avatar_url
+            } if upr.project else None,
+            user_id=upr.user_id,
+            role_id=upr.role_id,
+            project_id=upr.project_id,
+            created_at=upr.created_at,
+            updated_at=upr.updated_at
         )

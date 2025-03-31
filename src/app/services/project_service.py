@@ -198,24 +198,24 @@ class ProjectService:
             log.error(f"Error handling Jira users found event: {str(e)}")
             raise
 
-    async def get_project_users_with_roles(self, project_id: int, search: Optional[str] = None) -> List[UserProjectRole]:
+    async def get_project_users_with_roles(self, project_key: str, search: Optional[str] = None) -> List[UserProjectRole]:
         """Get all users in a project with their roles
 
         Args:
-            project_id: The ID of the project
+            project_key: The key of the project
             search: Optional search term to filter users by name or email
 
         Returns:
             List of UserProjectRole objects with user and role information
         """
         # First check if the project exists
-        project = await self.project_repository.get_project_by_id(project_id)
-        if not project:
-            raise ProjectNotFoundError(f"Project with id {project_id} not found")
+        project = await self.project_repository.get_project_by_key(project_key)
+        if not project or not project.id:
+            raise ProjectNotFoundError(f"Project with key {project_key} not found")
 
         # Get all user_project_roles for this project with user and role information
         # This will need to be implemented in the repository
-        return await self.role_repository.get_project_users_with_roles(project_id, search)
+        return await self.role_repository.get_project_users_with_roles(project.id, search)
 
     async def get_project_users_with_roles_paginated(
         self,
