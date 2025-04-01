@@ -570,19 +570,22 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         Returns:
             List of UserProjectRole objects with user and role information
         """
+        # Build base query to get all user-role combinations
         query = (
-            select(UserProjectRole)
+            select(UserProjectRole, User, Role)
+            .join(User, col(User.id) == col(UserProjectRole.user_id))
+            .join(Role, col(Role.id) == col(UserProjectRole.role_id))
             .options(
                 selectinload(UserProjectRole.user),  # type: ignore
-                selectinload(UserProjectRole.role)  # type: ignore
+                selectinload(UserProjectRole.role).selectinload(Role.permissions)  # type: ignore
             )
-            .where(UserProjectRole.project_id == project_id)
+            .where(col(UserProjectRole.project_id) == project_id)
         )
 
         # Add search filter if provided
         if search:
             search_term = f"%{search}%"
-            query = query.join(User, col(User.id) == UserProjectRole.user_id).where(
+            query = query.where(
                 or_(
                     col(User.name).ilike(search_term),
                     col(User.email).ilike(search_term)
@@ -590,9 +593,51 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             )
 
         result = await self.session.exec(query)
-        user_project_roles = result.all()
+        all_rows = result.all()
 
-        return [self._to_domain_user_project_role(upr) for upr in user_project_roles]
+        # Group by user_id to collect all roles for each user
+        user_roles_map: Dict[int, Dict[str, Any]] = {}
+
+        for upr, user, role in all_rows:
+            if not user or not user.id:
+                continue
+
+            if user.id not in user_roles_map:
+                # Initialize user data
+                domain_user = self._to_domain_user(user)
+
+                # Create a new entry in the map
+                user_roles_map[user.id] = {
+                    'user': domain_user,
+                    'roles': [],  # Store all role objects
+                    'project_id': upr.project_id,
+                    'created_at': upr.created_at,
+                    'updated_at': upr.updated_at
+                }
+
+            # Add complete role object to the user's roles list
+            domain_role = self._to_domain_role(role)
+            if role.permissions:  # Add permissions if they exist
+                domain_role.permissions = [self._permission_to_domain(p) for p in role.permissions]
+            user_roles_map[user.id]['roles'].append(domain_role)
+
+        # Convert the map to a list of UserProjectRoleEntity objects
+        user_project_roles: List[UserProjectRoleEntity] = []
+        for user_id, data in user_roles_map.items():
+            domain_upr = UserProjectRoleEntity(
+                id=0,  # Synthetic ID since we're grouping
+                user_id=user_id,
+                project_id=data['project_id'],
+                role_id=0,  # Not used in this context
+                user=data['user'],
+                role=None,  # Not using single role anymore
+                roles=data['roles'],  # Store all roles for the user
+                created_at=data['created_at'],
+                updated_at=data['updated_at']
+            )
+            user_project_roles.append(domain_upr)
+
+        return user_project_roles
 
     async def get_project_users_with_roles_paginated(
         self,

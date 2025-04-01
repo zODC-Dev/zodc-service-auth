@@ -47,6 +47,21 @@ class UserService:
             raise UserNotFoundError(f"User with email {email} not found")
         return user
 
+    async def get_users(
+        self,
+        search: Optional[str] = None
+    ) -> List[User]:
+        """Get users with their roles
+
+        Args:
+            search: Optional search term to filter users by name or email
+
+        Returns:
+            List of User objects
+        """
+        # Get all users from system
+        return await self.user_repository.get_all_users(search=search)
+
     def _validate_update_data(self, update_data: Dict[str, Any]) -> bool:
         """Validate user update data"""
         allowed_fields = {"name", "email", "is_active"}

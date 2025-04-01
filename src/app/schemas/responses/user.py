@@ -5,6 +5,13 @@ from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user import User
 
 
+# Add new model for project roles
+class ProjectRoleInfo(BaseResponse):
+    project_key: str
+    roles: List[str]
+    permission_names: List[str]
+
+
 class UserResponse(BaseResponse):
     id: int
     email: str
@@ -15,24 +22,42 @@ class UserResponse(BaseResponse):
     is_jira_linked: bool
     is_system_user: bool
     permission_names: List[str]
-    project_roles: List[Dict[str, Any]] = []
+    project_roles: List[ProjectRoleInfo] = []
     avatar_url: Optional[str] = None
 
     @classmethod
     def from_domain(cls, user: User) -> "UserResponse":
-        project_roles = []
+        # Create a map to group roles by project
+        project_roles_map: Dict[str, Any] = {}
+
         if user.user_project_roles:
             for upr in user.user_project_roles:
                 if upr.project and upr.role:
-                    permission_names = []
-                    if upr.role.permissions:
-                        permission_names = [p.name for p in upr.role.permissions]
+                    project_key = upr.project.key
+                    if project_key not in project_roles_map:
+                        project_roles_map[project_key] = {
+                            "roles": [],
+                            "permission_names": set()
+                        }
 
-                    project_roles.append({
-                        "projectKey": upr.project.key,
-                        "role": upr.role.name,
-                        "permissionNames": permission_names
-                    })
+                    # Add role name
+                    project_roles_map[project_key]["roles"].append(upr.role.name)
+
+                    # Add permissions from this role
+                    if upr.role.permissions:
+                        project_roles_map[project_key]["permission_names"].update(
+                            p.name for p in upr.role.permissions
+                        )
+
+        # Convert map to list of ProjectRoleInfo
+        project_roles = [
+            ProjectRoleInfo(
+                project_key=project_key,
+                roles=info["roles"],
+                permission_names=list(info["permission_names"])
+            )
+            for project_key, info in project_roles_map.items()
+        ]
 
         return cls(
             id=user.id,
@@ -44,7 +69,8 @@ class UserResponse(BaseResponse):
             is_jira_linked=user.is_jira_linked,
             is_system_user=user.is_system_user,
             permission_names=[
-                p.name for p in user.system_role.permissions] if user.system_role and user.system_role.permissions else [],
+                p.name for p in user.system_role.permissions
+            ] if user.system_role and user.system_role.permissions else [],
             project_roles=project_roles,
             avatar_url=user.avatar_url
         )

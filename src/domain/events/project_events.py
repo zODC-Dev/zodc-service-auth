@@ -29,3 +29,36 @@ class JiraUsersRequestEvent(BaseModel):
     project_id: int
     jira_project_id: str
     key: str
+
+
+class JiraProjectSyncSummaryDTO(BaseModel):
+    total_issues: int = 0
+    synced_issues: int = 0
+    total_sprints: int = 0
+    synced_sprints: int = 0
+    total_users: int = 0
+    synced_users: int = 0
+    started_at: str
+    completed_at: Optional[str] = None
+
+
+class JiraProjectSyncNATS(BaseModel):
+    success: bool
+    project_key: str
+    error_message: Optional[str] = None
+    sync_summary: JiraProjectSyncSummaryDTO
+
+
+class JiraProjectSyncNATSReplyDTO(BaseModel):
+    success: bool
+    data: JiraProjectSyncNATS
+
+
+class JiraProjectSyncNATSRequestDTO(BaseModel):
+    user_id: int
+    project_key: str
+    project_id: int
+    jira_project_id: str
+    sync_issues: bool = True
+    sync_sprints: bool = True
+    sync_users: bool = True

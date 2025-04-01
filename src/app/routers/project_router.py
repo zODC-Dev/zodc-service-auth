@@ -10,7 +10,6 @@ from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCrea
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
-    ProjectAssigneeResponse,
     ProjectResponse,
 )
 from src.domain.constants.roles import SystemRoles
@@ -28,14 +27,14 @@ async def create_project(
     return await controller.create_project(project_data)
 
 
-@router.get("/{project_id}", response_model=StandardResponse[ProjectResponse])
+@router.get("/{project_key}", response_model=StandardResponse[ProjectResponse])
 async def get_project(
     request: Request,
-    project_id: int,
+    project_key: str,
     controller: ProjectController = Depends(get_project_controller)
 ):
-    """Get a project by ID."""
-    return await controller.get_project(project_id)
+    """Get a project by key."""
+    return await controller.get_project(project_key)
 
 
 @router.get("", response_model=StandardResponse[List[ProjectResponse]])
@@ -92,34 +91,6 @@ async def link_jira_project(
     # TODO: Create user if not exists, is_active = False, is_jira_linked = False
     user_id = int(claims.sub)
     return await controller.link_jira_project(request, user_id)
-
-
-@router.get(
-    "/{project_id}/users/all",
-    response_model=StandardResponse[List[ProjectAssigneeResponse]],
-    summary="Get all users in a project with their roles"
-)
-async def get_project_assignees(
-    request: Request,
-    project_id: int,
-    search: Optional[str] = None,
-    controller: ProjectController = Depends(get_project_controller)
-):
-    """Get all users in a project with their roles.
-
-    Args:
-        request: FastAPI request object
-        project_id: The ID of the project
-        search: Optional search term to filter users by name or email
-        controller: Project controller instance
-
-    Returns:
-        List of users with their roles in the project
-    """
-    return await controller.get_project_assignees(
-        project_id=project_id,
-        search=search
-    )
 
 
 @router.get(
