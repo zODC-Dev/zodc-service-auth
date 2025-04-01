@@ -6,7 +6,7 @@ from nats.aio.msg import Msg
 
 from src.configs.logger import log
 from src.configs.settings import settings
-from src.domain.services.nats_service import INATSService, MessageCallback
+from src.domain.services.nats_service import INATSService, MessageCallback, RequestReplyCallback
 
 
 class NATSService(INATSService):
@@ -83,4 +83,37 @@ class NATSService(INATSService):
             return json.loads(response.data.decode()) if response.data else {}
         except Exception as e:
             log.error(f"Failed to send request: {str(e)}")
+            raise
+
+    async def subscribe_request(self, subject: str, callback: RequestReplyCallback) -> None:
+        """Subscribe to a subject for handling request-reply"""
+        try:
+            if not self._is_connected:
+                await self.connect()
+
+            async def message_handler(msg: Msg) -> None:
+                try:
+                    data = json.loads(msg.data.decode())
+
+                    async def respond(response_data: Dict[str, Any]) -> None:
+                        """Helper function to respond to the request"""
+                        response_payload = json.dumps(response_data).encode()
+                        await msg.respond(response_payload)
+
+                    # Call the callback with subject, data and respond function
+                    await callback(msg.subject, data, respond)
+                except Exception as e:
+                    log.error(f"Error processing request message: {str(e)}")
+                    # Send error response if an exception occurs
+                    error_response = {
+                        "success": False,
+                        "message": f"Error processing request: {str(e)}",
+                        "error_code": "INTERNAL_ERROR"
+                    }
+                    await msg.respond(json.dumps(error_response).encode())
+
+            await self._client.subscribe(subject, cb=message_handler)
+            log.info(f"Subscribed to request subject: {subject}")
+        except Exception as e:
+            log.error(f"Failed to subscribe to request: {str(e)}")
             raise
