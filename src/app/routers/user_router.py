@@ -38,7 +38,8 @@ async def get_my_projects(
 @router.get("/assignees", response_model=StandardResponse[List[ProjectAssigneeResponse]])
 async def get_users(
     request: Request,
-    project_key: Optional[str] = Query(None, description="Optional project key to filter users by project"),
+    project_key: Optional[str] = Query(
+        None, description="Optional project key to filter users by project", alias="projectKey"),
     search: Optional[str] = Query(None, description="Search by user name or email"),
     user_controller: UserController = Depends(get_user_controller),
     project_controller: ProjectController = Depends(get_project_controller)
