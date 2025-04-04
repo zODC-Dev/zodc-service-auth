@@ -16,9 +16,11 @@ from src.app.routers.role_router import router as role_router
 from src.app.routers.user_router import router as user_router
 from src.app.services.nats_subscribe_service import NATSSubscribeService
 from src.app.services.project_service import ProjectService
+from src.app.services.role_service import RoleService
 from src.configs.database import get_db, init_db
 from src.configs.logger import log
 from src.configs.settings import settings
+from src.infrastructure.repositories.sqlalchemy_permission_repository import SQLAlchemyPermissionRepository
 from src.infrastructure.repositories.sqlalchemy_project_repository import SQLAlchemyProjectRepository
 from src.infrastructure.repositories.sqlalchemy_role_repository import SQLAlchemyRoleRepository
 from src.infrastructure.repositories.sqlalchemy_user_repository import SQLAlchemyUserRepository
@@ -69,6 +71,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     user_repository = SQLAlchemyUserRepository(db, user_event_service, redis_service)
     project_repository = SQLAlchemyProjectRepository(db)
     role_repository = SQLAlchemyRoleRepository(db)
+    permission_repository = SQLAlchemyPermissionRepository(db)
+
+    # Initialize services
+    role_service = RoleService(
+        role_repository,
+        permission_repository,
+        project_repository,
+        user_repository
+    )
 
     project_service = ProjectService(
         project_repository,
@@ -80,7 +91,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Start subscribers
     nats_subscribe_service = NATSSubscribeService(
         nats_service,
-        project_service
+        project_service,
+        role_service
     )
 
     await nats_subscribe_service.start_nats_subscribers()

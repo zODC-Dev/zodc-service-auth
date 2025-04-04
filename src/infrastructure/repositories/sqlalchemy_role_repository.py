@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import and_, asc, col, delete, desc, distinct, func, or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.configs.logger import log
 from src.domain.entities.permission import Permission as PermissionEntity
 from src.domain.entities.project import Project as ProjectEntity
 from src.domain.entities.role import Role as RoleEntity, RoleCreate, RoleUpdate
@@ -151,7 +152,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         project_id: int,
         role_name: str
     ) -> None:
-        """Assign or update a project role for a user"""
+        """Assign a project role to a user without removing existing roles"""
         # Get role
         role_result = await self.session.exec(
             select(Role).where(Role.name == role_name)
@@ -164,30 +165,31 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         if role.is_system_role:
             raise RoleIsSystemRoleError(role_name=role_name)
 
-        # Check if assignment already exists
+        # Check if this specific role assignment already exists
         existing_assignment = await self.session.exec(
             select(UserProjectRole)
             .where(
                 UserProjectRole.user_id == user_id,
-                UserProjectRole.project_id == project_id
+                UserProjectRole.project_id == project_id,
+                UserProjectRole.role_id == role.id
             )
         )
+
         assignment = existing_assignment.first()
 
-        if assignment:
-            # Update existing assignment
-            assignment.role_id = role.id
-            self.session.add(assignment)
-        else:
-            # Create new assignment
+        # Only create a new assignment if this specific role doesn't exist for the user in this project
+        if not assignment:
+            log.info(f"Adding new role {role_name} to user {user_id} in project {project_id}")
+            # Create new assignment without removing existing roles
             new_assignment = UserProjectRole(
                 user_id=user_id,
                 project_id=project_id,
                 role_id=role.id
             )
             self.session.add(new_assignment)
-
-        await self.session.commit()
+            await self.session.commit()
+        else:
+            log.info(f"User {user_id} already has role {role_name} in project {project_id}")
 
     async def get_system_role_by_user_id(self, user_id: int) -> Optional[SystemRole]:
         result = await self.session.exec(
@@ -846,3 +848,42 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 created_at=role.created_at,
                 updated_at=role.updated_at
             )
+
+    async def unassign_project_role_from_user(
+        self,
+        user_id: int,
+        project_id: int,
+        role_name: str
+    ) -> None:
+        """Unassign a project role from a user"""
+        # Get role
+        role_result = await self.session.exec(
+            select(Role).where(Role.name == role_name)
+        )
+        role = role_result.first()
+        if not role or role.id is None:
+            raise RoleNotFoundError(role_name=role_name)
+
+        # Check if role is project role
+        if role.is_system_role:
+            raise RoleIsSystemRoleError(role_name=role_name)
+
+        # Find the specific role assignment
+        existing_assignment = await self.session.exec(
+            select(UserProjectRole)
+            .where(
+                UserProjectRole.user_id == user_id,
+                UserProjectRole.project_id == project_id,
+                UserProjectRole.role_id == role.id
+            )
+        )
+        assignment = existing_assignment.first()
+
+        # Only delete if the assignment exists
+        if assignment:
+            log.info(f"Removing role {role_name} from user {user_id} in project {project_id}")
+            await self.session.delete(assignment)
+            await self.session.commit()
+        else:
+            log.info(f"User {user_id} does not have role {role_name} in project {project_id}")
+            # Don't raise an exception, just log it

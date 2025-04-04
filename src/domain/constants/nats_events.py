@@ -18,6 +18,8 @@ class NATSPublishTopic(str, Enum):
     JIRA_LOGIN = "jira.login"
     MICROSOFT_LOGIN = "microsoft.login"
     JIRA_PROJECT_SYNC = "jira.project.sync.request"
+    ASSIGN_PROJECT_ROLE_REQUEST = "role.assign.request"
+    UNASSIGN_PROJECT_ROLE_REQUEST = "role.unassign.request"
 
 
 class NATSSubscribeTopic(str, Enum):

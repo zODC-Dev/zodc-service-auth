@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Awaitable, Callable, Dict
 
 MessageCallback = Callable[[str, Dict[str, Any]], Awaitable[None]]
+RequestReplyCallback = Callable[[str, Dict[str, Any], Callable[[Dict[str, Any]], Awaitable[None]]], Awaitable[None]]
 
 
 class INATSService(ABC):
@@ -30,4 +31,15 @@ class INATSService(ABC):
     @abstractmethod
     async def request(self, subject: str, message: Dict[str, Any], timeout: int = 10) -> Dict[str, Any]:
         """Send request and wait for response"""
+        pass
+
+    @abstractmethod
+    async def subscribe_request(self, subject: str, callback: RequestReplyCallback) -> None:
+        """Subscribe to a subject for handling request-reply pattern.
+
+        The callback will receive:
+        - subject: The subject that received the request
+        - data: The parsed request data
+        - respond: A function to call with the response data
+        """
         pass

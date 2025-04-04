@@ -150,3 +150,13 @@ class IRoleRepository(ABC):
     async def get_role_by_id(self, role_id: int) -> Optional[Role]:
         """Get a role by its ID"""
         pass
+
+    @abstractmethod
+    async def unassign_project_role_from_user(
+        self,
+        user_id: int,
+        project_id: int,
+        role_name: str
+    ) -> None:
+        """Unassign a project role from a user"""
+        pass
