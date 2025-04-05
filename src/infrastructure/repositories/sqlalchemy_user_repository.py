@@ -211,7 +211,9 @@ class SQLAlchemyUserRepository(IUserRepository):
                 name=user.name,
                 is_active=user.is_active,
                 jira_account_id=user.jira_account_id,
-                is_jira_linked=user.is_jira_linked
+                is_jira_linked=user.is_jira_linked,
+                is_system_user=user.is_system_user,
+                avatar_url=user.avatar_url
             )
 
             self.session.add(db_user)

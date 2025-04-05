@@ -8,6 +8,7 @@ from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.constants.auth import TokenType
 from src.domain.constants.nats_events import NATSPublishTopic
+from src.domain.constants.roles import SystemRoles
 from src.domain.entities.auth import SSOCredentials, TokenPair, UserCredentials
 from src.domain.entities.user import User, UserUpdate
 from src.domain.exceptions.auth_exceptions import (
@@ -19,6 +20,7 @@ from src.domain.exceptions.auth_exceptions import (
 from src.domain.exceptions.user_exceptions import UserCreationError
 from src.domain.repositories.auth_repository import IAuthRepository
 from src.domain.repositories.refresh_token_repository import IRefreshTokenRepository
+from src.domain.repositories.role_repository import IRoleRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.jira_sso_service import IJiraSSOService
 from src.domain.services.microsoft_sso_service import IMicrosoftSSOService
@@ -33,6 +35,7 @@ class AuthService:
         self,
         auth_repository: IAuthRepository,
         user_repository: IUserRepository,
+        role_repository: IRoleRepository,
         token_service: ITokenService,
         microsoft_sso_service: IMicrosoftSSOService,
         jira_sso_service: IJiraSSOService,
@@ -49,6 +52,7 @@ class AuthService:
         self.redis_service = redis_service
         self.refresh_token_repository = refresh_token_repository
         self.user_event_service = user_event_service
+        self.role_repository = role_repository
         self.nats_service = nats_service
 
     async def login(self, credentials: UserCredentials) -> TokenPair:
@@ -83,34 +87,28 @@ class AuthService:
             user = await self.user_repository.get_user_by_email(microsoft_info.email)
             if user is None:
                 user = await self.auth_repository.create_sso_user(microsoft_info)
+                log.info(f"Created user {user.id} with email {user.email} name {user.name}")
+            elif user and user.id and not user.is_system_user:
+                update_payload = UserUpdate(
+                    is_system_user=True,
+                    is_active=True,
+                )
+                await self.user_repository.update_user_by_id(user.id, update_payload)
+                # Assign system role to user
+                await self.role_repository.assign_system_role_to_user(user.id, SystemRoles.USER)
 
-            if user.id is None:
+            if user or user.id is None:
                 raise UserCreationError("Something went wrong")
 
-            # # Publish Microsoft token event to NATS
-            # token_event = TokenEvent(
-            #     user_id=user.id,
-            #     access_token=microsoft_info.access_token,
-            #     refresh_token=microsoft_info.refresh_token,
-            #     expires_in=microsoft_info.expires_in,
-            #     token_type=TokenType.MICROSOFT,
-            #     created_at=datetime.now(timezone.utc),
-            #     expires_at=datetime.now(timezone.utc) + timedelta(seconds=microsoft_info.expires_in)
-            # )
             # Publish Microsoft login event
             microsoft_login_event = {
                 "user_id": user.id,
                 "email": user.email,
+                "name": user.name,
                 "access_token": microsoft_info.access_token,
                 "refresh_token": microsoft_info.refresh_token,
                 "expires_in": microsoft_info.expires_in,
             }
-
-            # # Publish Microsoft token event to NATS
-            # await self.nats_service.publish(
-            #     NATSPublishTopic.MICROSOFT_TOKEN_UPDATED.value,
-            #     token_event.model_dump(mode='json', exclude_none=True)
-            # )
 
             # Publish Microsoft login event to NATS
             await self.nats_service.publish(
@@ -170,6 +168,7 @@ class AuthService:
                 "user_id": user.id,
                 "jira_account_id": jira_account_id,
                 "email": user.email,
+                "avatar_url": avatar_url,
                 "is_system_user": user.is_system_user,
                 "access_token": jira_info.access_token,
                 "refresh_token": jira_info.refresh_token,
