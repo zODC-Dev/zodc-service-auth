@@ -101,6 +101,8 @@ class ProjectController:
             )
         except (ProjectError, UnauthorizedError) as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     async def get_project_assignees(
         self,

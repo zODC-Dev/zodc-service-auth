@@ -62,7 +62,8 @@ async def get_auth_service(
     nats_service=Depends(get_nats_service),
     user_event_service=Depends(get_user_event_service),
     redis_service=Depends(get_redis_service),
-    refresh_token_repository=Depends(get_refresh_token_repository)
+    refresh_token_repository=Depends(get_refresh_token_repository),
+    role_repository=Depends(get_role_repository)
 ):
     """Dependency for auth service"""
     return AuthService(
@@ -71,6 +72,7 @@ async def get_auth_service(
         microsoft_sso_service=microsoft_sso_service,
         jira_sso_service=jira_sso_service,
         user_repository=user_repository,
+        role_repository=role_repository,
         nats_service=nats_service,
         user_event_service=user_event_service,
         redis_service=redis_service,

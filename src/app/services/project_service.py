@@ -11,6 +11,7 @@ from src.domain.events.project_events import (
     JiraProjectSyncNATSReplyDTO,
     JiraProjectSyncNATSRequestDTO,
     JiraUsersResponseEvent,
+    SyncedJiraUserDTO,
 )
 from src.domain.exceptions.project_exceptions import (
     ProjectCreateError,
@@ -128,6 +129,10 @@ class ProjectService:
                 log.info(f"Jira project sync completed: Issues: {reply.data.sync_summary.synced_issues}/{reply.data.sync_summary.total_issues}, " +
                          f"Sprints: {reply.data.sync_summary.synced_sprints}/{reply.data.sync_summary.total_sprints}, " +
                          f"Users: {reply.data.sync_summary.synced_users}/{reply.data.sync_summary.total_users}")
+
+                # Process synced users from Jira
+                if reply.data.synced_users:
+                    await self._process_synced_jira_users(reply.data.synced_users, new_project.id)
         except Exception as e:
             raise Exception(f"Error during Jira project sync: {str(e)}") from e
 
@@ -145,6 +150,63 @@ class ProjectService:
 
         return new_project
 
+    async def _process_synced_jira_users(self, synced_users: List[SyncedJiraUserDTO], project_id: int):
+        """Process synced users from Jira and create users if they don't exist.
+
+        Args:
+            synced_users: List of SyncedJiraUserDTO objects
+            project_id: The ID of the project
+        """
+        try:
+            # Get member role
+            member_role = await self.role_repository.get_role_by_name(ProjectRoles.TEAM_MEMBER.value)
+            if not member_role:
+                raise RoleNotFoundError(role_name=ProjectRoles.TEAM_MEMBER.value)
+
+            log.info(f"Processing {synced_users} synced users")
+            for jira_user in synced_users:
+                # First try to find user by email
+                user = await self.user_repository.get_user_by_email(jira_user.email)
+
+                if not user:
+                    # If not found by email, try to find by Jira account ID
+                    user = await self.user_repository.get_user_by_jira_account_id(jira_user.jira_account_id)
+
+                if not user:
+                    # Create new user if not exists
+                    user = await self.user_repository.create_user(
+                        UserCreate(
+                            email=jira_user.email,
+                            name=jira_user.name,
+                            is_active=False,
+                            jira_account_id=jira_user.jira_account_id,
+                            is_jira_linked=False,
+                            is_system_user=False,  # Users created from Jira sync are not system users
+                            avatar_url=jira_user.avatar_url
+                        )
+                    )
+                    log.info(f"Created new inactive user from Jira sync: {jira_user.email}")
+
+                if user and user.id:
+                    # Check if user already has a role in project
+                    has_role = await self.role_repository.check_user_has_any_project_role(
+                        user_id=user.id,
+                        project_id=project_id
+                    )
+
+                    # Only assign member role if user doesn't have any role
+                    if not has_role:
+                        await self.role_repository.assign_project_role_to_user(
+                            user_id=user.id,
+                            project_id=project_id,
+                            role_name=ProjectRoles.TEAM_MEMBER.value
+                        )
+                        log.info(f"Assigned member role to user {user.email} in project {project_id}")
+        except Exception as e:
+            log.error(f"Error processing synced Jira users: {str(e)}")
+            # Don't raise exception to not interrupt the project creation flow
+            # Just log the error and continue
+
     async def handle_jira_users_response_event(self, event: JiraUsersResponseEvent) -> None:
         """Handle users found in Jira project"""
         try:
@@ -154,9 +216,9 @@ class ProjectService:
                 raise ProjectNotFoundError(f"Project with id {event.project_id} not found")
 
             # Get member role
-            member_role = await self.role_repository.get_role_by_name("member")
+            member_role = await self.role_repository.get_role_by_name(ProjectRoles.TEAM_MEMBER.value)
             if not member_role:
-                raise RoleNotFoundError(role_name="member")
+                raise RoleNotFoundError(role_name=ProjectRoles.TEAM_MEMBER.value)
 
             # Find matching users by jira_account_id and assign member role
             for jira_user in event.users:
@@ -191,7 +253,7 @@ class ProjectService:
                         await self.role_repository.assign_project_role_to_user(
                             user_id=user.id,
                             project_id=event.project_id,
-                            role_name="member"
+                            role_name=ProjectRoles.TEAM_MEMBER.value
                         )
                         log.info(f"Assigned member role to user {user.email} in project {event.project_id}")
 
