@@ -97,7 +97,7 @@ class AuthService:
                 # Assign system role to user
                 await self.role_repository.assign_system_role_to_user(user.id, SystemRoles.USER)
 
-            if user or user.id is None:
+            if not user or user.id is None:
                 raise UserCreationError("Something went wrong")
 
             # Publish Microsoft login event
