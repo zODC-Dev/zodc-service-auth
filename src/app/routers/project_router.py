@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from src.app.controllers.project_controller import ProjectController
-from src.app.dependencies.auth import get_jwt_claims, require_auth
+from src.app.dependencies.auth import get_jwt_claims
 from src.app.dependencies.project import get_project_controller
 from src.app.schemas.requests.auth import JWTClaims
 from src.app.schemas.requests.project import LinkJiraProjectRequest, ProjectCreateRequest, ProjectUpdateRequest
@@ -12,7 +12,6 @@ from src.app.schemas.responses.project import (
     PaginatedProjectUsersWithRolesResponse,
     ProjectResponse,
 )
-from src.domain.constants.roles import SystemRoles
 
 router = APIRouter()
 
@@ -41,9 +40,9 @@ async def get_project(
 async def get_all_projects(
     request: Request,
     controller: ProjectController = Depends(get_project_controller),
-    auth_data=require_auth(
-        system_roles=[SystemRoles.PRODUCT_OWNER]
-    )
+    # auth_data=require_auth(
+    #     system_roles=[SystemRoles.PRODUCT_OWNER]
+    # )
 ):
     """Get all projects."""
     return await controller.get_all_projects()

@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 from src.app.schemas.requests.project import LinkJiraProjectRequest
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
+from src.domain.constants.roles import ProjectRoles
 from src.domain.entities.project import Project, ProjectCreate, ProjectUpdate
 from src.domain.entities.user import UserCreate
 from src.domain.entities.user_project_role import UserProjectRole
@@ -97,7 +98,7 @@ class ProjectService:
         await self.role_repository.assign_project_role_to_user(
             user_id=current_user_id,
             project_id=new_project.id,
-            role_name="project_product_owner"
+            role_name=ProjectRoles.PROJECT_PRODUCT_OWNER.value
         )
 
         # Create Jira project sync request DTO
