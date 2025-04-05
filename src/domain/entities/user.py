@@ -54,7 +54,7 @@ class UserUpdate(BaseModel):
     is_jira_linked: Optional[bool] = None
     avatar_url: Optional[str] = None  # User's avatar URL from Jira
     is_system_user: Optional[bool] = None
-    updated_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
 
 
 class UserWithPassword(User):
