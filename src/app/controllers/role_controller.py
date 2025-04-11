@@ -9,6 +9,7 @@ from src.app.schemas.requests.role import (
 )
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.role import (
+    AdminRoleResponse,
     GetProjectRoleResponse,
     GetSystemRoleResponse,
     PaginatedGetProjectRolesResponse,
@@ -229,4 +230,19 @@ class RoleController:
         except (UserNotFoundError, ProjectNotFoundError, RoleNotFoundError) as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
         except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    async def get_all_roles_for_admin(
+        self,
+        is_active: Optional[bool] = None
+    ) -> StandardResponse[List[AdminRoleResponse]]:
+        try:
+            roles = await self.role_service.get_all_roles_without_pagination(
+                is_active=is_active
+            )
+            return StandardResponse(
+                message="Roles retrieved successfully",
+                data=[AdminRoleResponse.from_domain(role) for role in roles]
+            )
+        except RoleError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e

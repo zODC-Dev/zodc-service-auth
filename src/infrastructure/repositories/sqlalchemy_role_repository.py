@@ -39,7 +39,8 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         return PermissionEntity(
             id=permission.id,
             name=permission.name,
-            description=permission.description
+            description=permission.description,
+            group=permission.group
         )
 
     def _to_domain(self, role: Role) -> RoleEntity:
@@ -49,6 +50,8 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             description=role.description,
             is_system_role=role.is_system_role,
             is_active=role.is_active,
+            created_at=role.created_at,
+            updated_at=role.updated_at,
             permissions=[self._permission_to_domain(
                 p) for p in role.permissions]
         )

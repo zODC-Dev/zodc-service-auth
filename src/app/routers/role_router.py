@@ -12,6 +12,7 @@ from src.app.schemas.requests.role import (
 )
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.role import (
+    AdminRoleResponse,
     PaginatedGetProjectRolesResponse,
     PaginatedGetSystemRolesResponse,
     PaginatedRoleResponse,
@@ -258,5 +259,30 @@ async def get_all_roles_without_pagination(
         List of all roles matching the active status filter
     """
     return await controller.get_all_roles_without_pagination(
+        is_active=is_active
+    )
+
+
+@router.get(
+    "/admin/all",
+    response_model=StandardResponse[List[AdminRoleResponse]],
+    summary="Get all roles without pagination for admin only"
+)
+async def get_all_roles_for_admin(
+    request: Request,
+    is_active: Optional[bool] = Query(None, description="Filter by active status", alias="isActive"),
+    controller: RoleController = Depends(get_role_controller)
+):
+    """Get all roles without pagination for admin only.
+
+    Args:
+        request: FastAPI request object
+        is_active: Optional filter by active status
+        controller: Role controller instance
+
+    Returns:
+        List of all roles matching the active status filter
+    """
+    return await controller.get_all_roles_for_admin(
         is_active=is_active
     )

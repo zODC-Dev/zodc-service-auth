@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user import User
+from src.domain.entities.user_project_role import UserProjectRole
 
 
 # Add new model for project roles
@@ -73,4 +74,35 @@ class UserResponse(BaseResponse):
             ] if user.system_role and user.system_role.permissions else [],
             project_roles=project_roles,
             avatar_url=user.avatar_url
+        )
+
+
+class AdminUserResponse(BaseResponse):
+    id: int
+    name: str
+    email: str
+    is_system_user: bool
+    avatar_url: Optional[str] = None
+    system_role: Optional[str] = None
+
+    @classmethod
+    def from_domain(cls, user_project_role: UserProjectRole) -> 'AdminUserResponse':
+        return cls(
+            id=user_project_role.user.id if user_project_role.user else None,
+            name=user_project_role.user.name if user_project_role.user else None,
+            email=user_project_role.user.email if user_project_role.user else None,
+            is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
+            avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
+            system_role=user_project_role.role.name if user_project_role.role else None,
+        )
+
+    @classmethod
+    def from_user(cls, user: User) -> 'AdminUserResponse':
+        return cls(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            is_system_user=user.is_system_user,
+            avatar_url=user.avatar_url,
+            system_role=user.system_role.name if user.system_role else None,
         )
