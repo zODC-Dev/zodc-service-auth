@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.app.schemas.responses.common import PaginatedResponse
+from src.app.schemas.responses.permission import PermissionResponse
 from src.domain.entities.role import Role
 from src.domain.entities.user_project_role import UserProjectRole
 
@@ -27,6 +28,30 @@ class RoleResponse(BaseResponse):
             is_active=role.is_active,
             permission_names=[
                 p.name for p in role.permissions] if role.permissions else [],
+            created_at=role.created_at,
+            updated_at=role.updated_at
+        )
+
+
+class AdminRoleResponse(BaseResponse):
+    id: int
+    name: str
+    description: Optional[str]
+    is_system_role: bool
+    is_active: bool
+    permissions: List['PermissionResponse']
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+    @classmethod
+    def from_domain(cls, role: Role) -> 'AdminRoleResponse':
+        return cls(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            is_system_role=role.is_system_role,
+            is_active=role.is_active,
+            permissions=[PermissionResponse.from_domain(p) for p in role.permissions] if role.permissions else [],
             created_at=role.created_at,
             updated_at=role.updated_at
         )

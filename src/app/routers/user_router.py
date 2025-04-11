@@ -10,7 +10,7 @@ from src.app.dependencies.project import get_project_controller
 from src.app.dependencies.user import get_user_controller
 from src.app.schemas.responses.base import StandardResponse
 from src.app.schemas.responses.project import ProjectAssigneeResponse, ProjectResponse
-from src.app.schemas.responses.user import UserResponse
+from src.app.schemas.responses.user import AdminUserResponse, UserResponse
 from src.app.utils.response_wrapper import wrap_response
 
 router = APIRouter()
@@ -62,5 +62,26 @@ async def get_users(
             search=search
         )
     return await user_controller.get_users(
+        search=search
+    )
+
+
+@router.get("/admin/all", response_model=StandardResponse[List[AdminUserResponse]])
+async def get_users_for_admin(
+    request: Request,
+    search: Optional[str] = Query(None, description="Search by user name or email"),
+    user_controller: UserController = Depends(get_user_controller),
+):
+    """Get all users with their roles. If project_key is provided, returns only users from that project.
+
+    Args:
+        request: FastAPI request object
+        search: Optional search term to filter users by name or email
+        user_controller: User controller instance
+
+    Returns:
+        List of users with their roles
+    """
+    return await user_controller.get_users_for_admin(
         search=search
     )
