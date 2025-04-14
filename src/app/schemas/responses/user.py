@@ -84,6 +84,8 @@ class AdminUserResponse(BaseResponse):
     is_system_user: bool
     avatar_url: Optional[str] = None
     system_role: Optional[str] = None
+    is_active: bool
+    is_jira_linked: bool
 
     @classmethod
     def from_domain(cls, user_project_role: UserProjectRole) -> 'AdminUserResponse':
@@ -94,6 +96,8 @@ class AdminUserResponse(BaseResponse):
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
             system_role=user_project_role.role.name if user_project_role.role else None,
+            is_active=user_project_role.user.is_active if user_project_role.user else None,
+            is_jira_linked=user_project_role.user.is_jira_linked if user_project_role.user else None,
         )
 
     @classmethod
@@ -105,4 +109,6 @@ class AdminUserResponse(BaseResponse):
             is_system_user=user.is_system_user,
             avatar_url=user.avatar_url,
             system_role=user.system_role.name if user.system_role else None,
+            is_active=user.is_active,
+            is_jira_linked=user.is_jira_linked,
         )
