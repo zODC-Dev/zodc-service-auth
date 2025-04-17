@@ -8,6 +8,14 @@ from src.domain.entities.user import User
 from src.domain.entities.user_project_role import UserProjectRole
 
 
+class RoleInfo(BaseResponse):
+    id: int
+    name: str
+    description: Optional[str] = None
+    is_active: bool = True
+    is_system_role: bool = False
+
+
 class ProjectResponse(BaseResponse):
     id: int
     name: str
@@ -34,15 +42,39 @@ class ProjectAssigneeResponse(BaseResponse):
     email: str
     is_system_user: bool
     avatar_url: Optional[str] = None
+    roles: List[RoleInfo] = Field(default_factory=list)
 
     @classmethod
     def from_domain(cls, user_project_role: UserProjectRole) -> 'ProjectAssigneeResponse':
+        roles = []
+        if hasattr(user_project_role, 'roles') and user_project_role.roles:
+            roles = [
+                RoleInfo(
+                    id=role.id,
+                    name=role.name,
+                    description=role.description,
+                    is_active=role.is_active,
+                    is_system_role=role.is_system_role
+                ) for role in user_project_role.roles
+            ]
+        elif user_project_role.role:
+            roles = [
+                RoleInfo(
+                    id=user_project_role.role.id,
+                    name=user_project_role.role.name,
+                    description=user_project_role.role.description,
+                    is_active=user_project_role.role.is_active,
+                    is_system_role=user_project_role.role.is_system_role
+                )
+            ]
+
         return cls(
             id=user_project_role.user.id if user_project_role.user else None,
             name=user_project_role.user.name if user_project_role.user else None,
             email=user_project_role.user.email if user_project_role.user else None,
             is_system_user=user_project_role.user.is_system_user if user_project_role.user else None,
             avatar_url=user_project_role.user.avatar_url if user_project_role.user else None,
+            roles=roles
         )
 
     @classmethod
@@ -54,14 +86,6 @@ class ProjectAssigneeResponse(BaseResponse):
             is_system_user=user.is_system_user,
             avatar_url=user.avatar_url
         )
-
-
-class RoleInfo(BaseResponse):
-    id: int
-    name: str
-    description: Optional[str] = None
-    is_active: bool = True
-    is_system_role: bool = False
 
 
 class ProjectUserWithRole(BaseResponse):
