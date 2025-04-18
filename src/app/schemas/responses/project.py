@@ -84,7 +84,16 @@ class ProjectAssigneeResponse(BaseResponse):
             name=user.name,
             email=user.email,
             is_system_user=user.is_system_user,
-            avatar_url=user.avatar_url
+            avatar_url=user.avatar_url,
+            roles=[
+                RoleInfo(
+                    id=user.system_role.id,
+                    name=user.system_role.name,
+                    description=user.system_role.description,
+                    is_active=user.system_role.is_active,
+                    is_system_role=user.system_role.is_system_role
+                )
+            ] if user.system_role else []
         )
 
 
