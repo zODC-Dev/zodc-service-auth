@@ -64,7 +64,7 @@ class UserResponse(BaseResponse):
             id=user.id,
             email=user.email,
             name=user.name,
-            system_role=user.system_role.name if user.system_role else None,
+            system_role=user.system_role.description if user.system_role else None,
             is_active=user.is_active,
             created_at=user.created_at,
             is_jira_linked=user.is_jira_linked,
