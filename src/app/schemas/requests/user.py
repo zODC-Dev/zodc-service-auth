@@ -27,9 +27,9 @@ class CreateUserPerformanceRequest(BaseModel):
     test_coverage: Optional[float] = Field(None, description="Test coverage score", ge=0, le=5, alias="testCoverage")
     documentation: Optional[float] = Field(None, description="Documentation score", ge=0, le=5)
     feedback: Optional[str] = Field(None, description="General feedback")
-    strengths: Optional[List[str]] = Field(None, description="List of strengths")
-    areas_for_improvement: Optional[List[str]] = Field(
-        None, description="List of areas for improvement", alias="areasForImprovement")
+    strengths: Optional[str] = Field(None, description="Strengths")
+    areas_for_improvement: Optional[str] = Field(
+        None, description="Areas for improvement", alias="areasForImprovement")
 
 
 class UpdateUserPerformanceRequest(BaseModel):
@@ -40,6 +40,6 @@ class UpdateUserPerformanceRequest(BaseModel):
     test_coverage: Optional[float] = Field(None, description="Test coverage score", ge=0, le=5, alias="testCoverage")
     documentation: Optional[float] = Field(None, description="Documentation score", ge=0, le=5)
     feedback: Optional[str] = Field(None, description="General feedback")
-    strengths: Optional[List[str]] = Field(None, description="List of strengths")
-    areas_for_improvement: Optional[List[str]] = Field(
-        None, description="List of areas for improvement", alias="areasForImprovement")
+    strengths: Optional[str] = Field(None, description="Strengths")
+    areas_for_improvement: Optional[str] = Field(
+        None, description="Areas for improvement", alias="areasForImprovement")
