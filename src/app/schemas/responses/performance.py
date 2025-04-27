@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user_performance import UserPerformance
@@ -19,8 +19,8 @@ class PerformanceResponse(BaseResponse):
     test_coverage: Optional[float] = None
     documentation: Optional[float] = None
     feedback: Optional[str] = None
-    strengths: Optional[List[str]] = None
-    areas_for_improvement: Optional[List[str]] = None
+    strengths: Optional[str] = None
+    areas_for_improvement: Optional[str] = None
 
     @classmethod
     def from_domain(cls, performance: UserPerformance) -> "PerformanceResponse":
@@ -29,8 +29,8 @@ class PerformanceResponse(BaseResponse):
 
         # Extract feedback
         data = performance.data or {}
-        strengths = data.get("strengths", [])
-        areas_for_improvement = data.get("areas_for_improvement", [])
+        strengths = data.get("strengths", "")
+        areas_for_improvement = data.get("areas_for_improvement", "")
         feedback = data.get("feedback", "")
 
         return cls(

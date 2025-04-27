@@ -30,8 +30,8 @@ class UserWithProfileResponse(BaseResponse):
     location: Optional[str] = None
     phone_number: Optional[str] = None
     joined_date: Optional[datetime] = None
-    primary_skills: List[Dict[str, Any]] = []
-    secondary_skills: List[Dict[str, Any]] = []
+    primary_skills: List[Any] = []
+    secondary_skills: List[Any] = []
     education: str = ''
     certifications: str = ''
 

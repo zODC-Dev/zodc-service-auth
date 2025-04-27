@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 from pydantic.alias_generators import to_camel
@@ -39,8 +39,8 @@ class UserPerformanceCreate(BaseModel):
     test_coverage: Optional[float] = None
     documentation: Optional[float] = None
     feedback: Optional[str] = None
-    strengths: Optional[List[str]] = None
-    areas_for_improvement: Optional[List[str]] = None
+    strengths: Optional[str] = None
+    areas_for_improvement: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -57,8 +57,8 @@ class UserPerformanceUpdate(BaseModel):
     test_coverage: Optional[float] = None
     documentation: Optional[float] = None
     feedback: Optional[str] = None
-    strengths: Optional[List[str]] = None
-    areas_for_improvement: Optional[List[str]] = None
+    strengths: Optional[str] = None
+    areas_for_improvement: Optional[str] = None
 
     class Config:
         from_attributes = True
