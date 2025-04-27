@@ -6,8 +6,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.configs.logger import log
 from src.domain.constants.nats_events import NATSPublishTopic
-from src.domain.entities.user import User as UserEntity, UserCreate, UserUpdate, UserWithPassword
+from src.domain.entities.user import User as UserEntity, UserCreate, UserProfileUpdate, UserUpdate, UserWithPassword
 from src.domain.entities.user_project_role import UserProjectRole as UserProjectRoleEntity
+from src.domain.exceptions.auth_exceptions import UserNotFoundError
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 from src.domain.services.user_event_service import IUserEventService
@@ -114,7 +115,12 @@ class SQLAlchemyUserRepository(IUserRepository):
             user_project_roles=user_project_roles,
             is_jira_linked=user.is_jira_linked,
             jira_account_id=user.jira_account_id,
-            avatar_url=user.avatar_url
+            avatar_url=user.avatar_url,
+            joined_date=user.joined_date,
+            job_title=user.job_title,
+            location=user.location,
+            phone_number=user.phone_number,
+            profile_data=user.profile_data,
         )
 
     async def get_user_by_id_with_role_permissions(self, user_id: int) -> Optional[UserEntity]:
@@ -183,7 +189,7 @@ class SQLAlchemyUserRepository(IUserRepository):
     async def get_user_by_email(self, email: str) -> Optional[UserEntity]:
         try:
             result = await self.session.exec(
-                select(UserModel).where(UserModel.email == email)
+                select(UserModel).where(col(UserModel.email) == email)
             )
             user = result.first()
             return self._to_domain(user) if user else None
@@ -308,6 +314,12 @@ class SQLAlchemyUserRepository(IUserRepository):
             jira_account_id=db_user.jira_account_id,
             is_system_user=db_user.is_system_user,
             avatar_url=db_user.avatar_url,
+            profile_data=db_user.profile_data,
+            job_title=db_user.job_title,
+            location=db_user.location,
+            phone_number=db_user.phone_number,
+            joined_date=db_user.joined_date,
+
         )
 
     def _to_domain_with_password(self, db_user: UserModel) -> UserWithPassword:
@@ -429,7 +441,12 @@ class SQLAlchemyUserRepository(IUserRepository):
                 updated_at=upr.user.updated_at,
                 is_system_user=upr.user.is_system_user,
                 is_jira_linked=upr.user.is_jira_linked,
-                avatar_url=upr.user.avatar_url
+                avatar_url=upr.user.avatar_url,
+                profile_data=upr.user.profile_data,
+                job_title=upr.user.job_title,
+                location=upr.user.location,
+                phone_number=upr.user.phone_number,
+                joined_date=upr.user.joined_date
             ) if upr.user else None,
             role={
                 "id": upr.role.id,
@@ -455,3 +472,40 @@ class SQLAlchemyUserRepository(IUserRepository):
             created_at=upr.created_at,
             updated_at=upr.updated_at
         )
+
+    async def update_profile(self, id: int, profile_data: UserProfileUpdate) -> UserEntity:
+        """Update a user's profile data"""
+        stmt = select(UserModel).where(col(UserModel.id) == id)
+        result = await self.session.exec(stmt)
+        db_user = result.one_or_none()
+
+        if db_user is None:
+            raise UserNotFoundError(f"User with id {id} not found")
+
+        # Update the profile_data field (merging with existing data if present)
+        if profile_data.profile_data:
+            db_user.profile_data = {**(db_user.profile_data or {}), **profile_data.profile_data}
+        if profile_data.job_title:
+            db_user.job_title = profile_data.job_title
+        if profile_data.location:
+            db_user.location = profile_data.location
+        if profile_data.phone_number:
+            db_user.phone_number = profile_data.phone_number
+        if profile_data.joined_date:
+            db_user.joined_date = profile_data.joined_date
+
+        await self.session.commit()
+        await self.session.refresh(db_user)
+
+        # Convert to domain entity
+        user = self._to_domain(db_user)
+        return user
+
+    async def get_user_profile(self, user_id: int) -> UserEntity:
+        """Get user profile"""
+        stmt = select(UserModel).where(col(UserModel.id) == user_id)
+        result = await self.session.exec(stmt)
+        db_user = result.one_or_none()
+        if db_user is None:
+            raise UserNotFoundError(f"User with id {user_id} not found")
+        return self._to_domain(db_user)

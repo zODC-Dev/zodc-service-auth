@@ -7,31 +7,41 @@ from .user_project_role import UserProjectRole
 
 if TYPE_CHECKING:
     from .user import User
+    from .user_performance import UserPerformance
+    from .user_project_history import UserProjectHistory
 
 
 class Project(BaseModelWithTimestamps, table=True):
     __tablename__ = "projects"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(unique=True, index=True)
-    key: str = Field(unique=True, index=True)
+    name: str = Field(max_length=255)
+    key: str = Field(max_length=10, unique=True)
+    jira_project_id: Optional[str] = Field(default=None)
     description: Optional[str] = None
     avatar_url: Optional[str] = None
 
-    # Relationship with users through UserProjectRole
+    # Relationships
     users: List["User"] = Relationship(
         back_populates="projects",
         link_model=UserProjectRole,
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "project,user"
+            "overlaps": "user,project,user_project_roles"
         }
     )
-
     user_project_roles: List["UserProjectRole"] = Relationship(
         back_populates="project",
         sa_relationship_kwargs={
             "lazy": "selectin",
-            "overlaps": "users"
+            "overlaps": "users,projects"
         }
+    )
+    user_history: List["UserProjectHistory"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    performance_records: List["UserPerformance"] = Relationship(
+        back_populates="project",
+        sa_relationship_kwargs={"lazy": "selectin"}
     )

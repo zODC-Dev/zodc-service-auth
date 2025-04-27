@@ -172,9 +172,9 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         existing_assignment = await self.session.exec(
             select(UserProjectRole)
             .where(
-                UserProjectRole.user_id == user_id,
-                UserProjectRole.project_id == project_id,
-                UserProjectRole.role_id == role.id
+                col(UserProjectRole.user_id) == user_id,
+                col(UserProjectRole.project_id) == project_id,
+                col(UserProjectRole.role_id) == role.id
             )
         )
 
@@ -209,16 +209,16 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         project_id: Optional[int] = None
     ) -> List[ProjectRole]:
         query = select(Role, Project)\
-            .join(UserProjectRole, col(Role.id) == UserProjectRole.role_id)\
-            .join(Project, col(Project.id) == UserProjectRole.project_id)
+            .join(UserProjectRole, col(Role.id) == col(UserProjectRole.role_id))\
+            .join(Project, col(Project.id) == col(UserProjectRole.project_id))
 
         if project_id:
             query = query.where(
-                UserProjectRole.user_id == user_id,
-                UserProjectRole.project_id == project_id
+                col(UserProjectRole.user_id) == user_id,
+                col(UserProjectRole.project_id) == project_id
             )
         else:
-            query = query.where(UserProjectRole.user_id == user_id)
+            query = query.where(col(UserProjectRole.user_id) == user_id)
 
         result = await self.session.exec(query)
         roles = result.all()
@@ -241,18 +241,18 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
             # Apply filters
             if is_active is not None:
-                base_query = base_query.where(Role.is_active == is_active)
+                base_query = base_query.where(col(Role.is_active) == is_active)
 
             if is_system_role is not None:
-                base_query = base_query.where(Role.is_system_role == is_system_role)
+                base_query = base_query.where(col(Role.is_system_role) == is_system_role)
 
             # Apply search
             if search:
                 search_term = f"%{search}%"
                 base_query = base_query.where(
                     or_(
-                        Role.name.ilike(search_term),  # type: ignore
-                        Role.description.ilike(search_term)  # type: ignore
+                        col(Role.name).ilike(search_term),
+                        col(Role.description).ilike(search_term)
                     )
                 )
 
@@ -309,7 +309,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             if role_data.permissions:
                 # Get permissions by names using async query
                 permissions_query = select(Permission).where(
-                    or_(*[Permission.id ==
+                    or_(*[col(Permission.id) ==
                         id for id in role_data.permissions])
                 )
                 result = await self.session.exec(permissions_query)
@@ -333,7 +333,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 await self.session.commit()
 
             # Get fresh role data with permissions
-            role_query = select(Role).where(Role.id == role.id).options(
+            role_query = select(Role).where(col(Role.id) == role.id).options(
                 selectinload(Role.permissions))  # type: ignore
             role_result = await self.session.exec(role_query)
             updated_role = role_result.first()
@@ -355,7 +355,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         """Update role with new data including permissions"""
         try:
             # Get role with permissions loaded
-            get_role_with_permissions_query = select(Role).where(Role.id == role_id).options(
+            get_role_with_permissions_query = select(Role).where(col(Role.id) == role_id).options(
                 selectinload(Role.permissions))  # type: ignore
             get_role_with_permissions_result = await self.session.exec(get_role_with_permissions_query)
             role = get_role_with_permissions_result.first()
@@ -377,7 +377,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             if role_data.permissions is not None:
                 # Get permissions by names
                 get_permissions_by_names_query = select(Permission).where(
-                    or_(*[Permission.id ==
+                    or_(*[col(Permission.id) ==
                         id for id in role_data.permissions])
                 )
                 get_permissions_by_names_result = await self.session.exec(get_permissions_by_names_query)
@@ -391,10 +391,13 @@ class SQLAlchemyRoleRepository(IRoleRepository):
 
                 # Bugs of sqlmodel, link: https://github.com/fastapi/sqlmodel/issues/909
                 # Delete existing role permissions
-                delete_query = delete(RolePermission).where(
-                    RolePermission.role_id == role_id  # type: ignore
+                delete_query = select(RolePermission).where(
+                    col(RolePermission.role_id) == role_id
                 )
-                await self.session.exec(delete_query)  # type: ignore
+                result = await self.session.exec(delete_query)
+                obj_to_delete = result.first()
+                if obj_to_delete:
+                    await self.session.delete(obj_to_delete)
 
                 # Create new role permissions
                 role_permissions = [
@@ -410,7 +413,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             await self.session.refresh(role)
 
             # Get fresh role data with permissions
-            get_role_by_id_query = select(Role).where(Role.id == role_id).options(
+            get_role_by_id_query = select(Role).where(col(Role.id) == role_id).options(
                 selectinload(Role.permissions))  # type: ignore
             get_role_by_id_result = await self.session.exec(get_role_by_id_query)
             updated_role = get_role_by_id_result.first()
@@ -451,20 +454,20 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     selectinload(UserProjectRole.user),  # type: ignore
                     selectinload(UserProjectRole.role)  # type: ignore
             )\
-                .where(UserProjectRole.project_id == project_id)
+                .where(col(UserProjectRole.project_id) == project_id)
 
             # Apply role filter
             if role_name:
                 base_query = base_query.join(
-                    Role).where(Role.name == role_name)
+                    Role).where(col(Role.name) == role_name)
 
             # Apply search filter
             if search:
                 search_term = f"%{search}%"
                 base_query = base_query.join(User).where(
                     or_(
-                        User.name.ilike(search_term),  # type: ignore
-                        User.email.ilike(search_term)  # type: ignore
+                        col(User.name).ilike(search_term),
+                        col(User.email).ilike(search_term)
                     )
                 )
 
@@ -509,13 +512,13 @@ class SQLAlchemyRoleRepository(IRoleRepository):
             if search:
                 base_query = base_query.where(
                     or_(
-                        Role.name.ilike(f"%{search}%"),  # type: ignore
-                        Role.description.ilike(f"%{search}%")  # type: ignore
+                        col(Role.name).ilike(f"%{search}%"),
+                        col(Role.description).ilike(f"%{search}%")
                     )
                 )
 
             if is_active is not None:
-                base_query = base_query.where(Role.is_active == is_active)
+                base_query = base_query.where(col(Role.is_active) == is_active)
 
             # Get total count before pagination
             count_query = select(func.count()).select_from(
@@ -528,7 +531,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 base_query = base_query.order_by(
                     direction(getattr(Role, sort_by)))
             else:
-                base_query = base_query.order_by(Role.name)
+                base_query = base_query.order_by(col(Role.name))
 
             # Apply pagination
             base_query = base_query.offset(
@@ -550,16 +553,16 @@ class SQLAlchemyRoleRepository(IRoleRepository):
     ) -> bool:
         """Check if user has any role in project"""
         async with self.session as session:
-            result = await session.execute(
+            result = await session.exec(
                 select(UserProjectRole)
                 .where(
                     and_(
-                        UserProjectRole.user_id == user_id,
-                        UserProjectRole.project_id == project_id
+                        col(UserProjectRole.user_id) == user_id,
+                        col(UserProjectRole.project_id) == project_id
                     )
                 )
             )
-            return result.scalar() is not None
+            return result.one_or_none() is not None
 
     async def get_project_users_with_roles(
         self,
@@ -665,13 +668,13 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                 )
                 .join(
                     User,
-                    col(User.id) == UserProjectRole.user_id
+                    col(User.id) == col(UserProjectRole.user_id)
                 )
                 .join(
                     Role,
-                    col(Role.id) == UserProjectRole.role_id
+                    col(Role.id) == col(UserProjectRole.role_id)
                 )
-                .where(UserProjectRole.project_id == project_id)
+                .where(col(UserProjectRole.project_id) == project_id)
             )
 
             # Apply search filter if provided

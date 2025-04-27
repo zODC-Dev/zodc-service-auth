@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from src.domain.entities.user import User, UserCreate, UserUpdate, UserWithPassword
+from src.domain.entities.user import User, UserCreate, UserProfileUpdate, UserUpdate, UserWithPassword
 from src.domain.entities.user_project_role import UserProjectRole
 
 
@@ -56,4 +56,14 @@ class IUserRepository(ABC):
         search: Optional[str] = None
     ) -> List[User]:
         """Get all users in the system with their roles"""
+        pass
+
+    @abstractmethod
+    async def get_user_profile(self, user_id: int) -> User:
+        """Get user profile"""
+        pass
+
+    @abstractmethod
+    async def update_profile(self, user_id: int, profile_data: UserProfileUpdate) -> User:
+        """Update user profile"""
         pass
