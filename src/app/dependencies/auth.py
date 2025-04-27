@@ -20,6 +20,7 @@ from src.configs.logger import log
 from src.configs.settings import settings
 from src.domain.entities.user import User
 from src.domain.exceptions.auth_exceptions import InvalidTokenError, TokenExpiredError
+from src.domain.exceptions.user_exceptions import UserInactiveError, UserNotFoundError
 from src.infrastructure.repositories.sqlalchemy_auth_repository import SQLAlchemyAuthRepository
 from src.infrastructure.services.jira_sso_service import JiraSSOService
 from src.infrastructure.services.jwt_token_service import JWTTokenService
@@ -131,7 +132,15 @@ async def get_current_user(
     user_service: Annotated[UserService, Depends(get_user_service)]
 ) -> User:
     """Get current user from database"""
-    return await user_service.get_current_user(user_id)
+    try:
+        return await user_service.get_current_user(user_id)
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except UserInactiveError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except Exception as e:
+        log.error(f"Error getting current user: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 # Reusable dependency types

@@ -1,19 +1,29 @@
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .base import BaseEntity
 
 if TYPE_CHECKING:
+    from .user import User
     from .user_project_role import UserProjectRole
 
 
 class Project(BaseEntity):
+    id: Optional[int] = None
     name: str
     key: str
     description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
     avatar_url: Optional[str] = None
-    user_project_roles: List["UserProjectRole"] = []
+
+    # Relationships
+    users: Optional[List["User"]] = None
+    user_project_roles: Optional[List["UserProjectRole"]] = None
+    # user_history: Optional[List["UserProjectHistory"]] = None
+    # performance_records: Optional[List["UserPerformance"]] = None
 
     class Config:
         from_attributes = True

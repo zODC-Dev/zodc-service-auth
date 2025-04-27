@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import EmailStr
 from sqlmodel import JSON, Field, Relationship, SQLModel
@@ -10,6 +10,8 @@ from .user_project_role import UserProjectRole
 if TYPE_CHECKING:
     from .project import Project
     from .role import Role
+    from .user_performance import UserPerformance
+    from .user_project_history import UserProjectHistory
 
 
 class UserBase(SQLModel):
@@ -34,6 +36,13 @@ class User(BaseModelWithTimestamps, table=True):
     avatar_url: Optional[str] = Field(default=None)  # User's avatar URL from Jira
     # System-wide role (e.g., HR, System Admin)
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id")
+    # Profile data for extended user information
+    profile_data: Optional[Dict[str, Any]] = Field(default_factory=dict, sa_type=JSON)
+    # Basic profile fields
+    job_title: Optional[str] = Field(default=None)
+    location: Optional[str] = Field(default=None)
+    phone_number: Optional[str] = Field(default=None)
+    joined_date: Optional[datetime] = Field(default=None)
 
     # Relationships
     system_role: Optional["Role"] = Relationship(
@@ -55,30 +64,11 @@ class User(BaseModelWithTimestamps, table=True):
             "overlaps": "projects,users"
         }
     )
-
-
-class UserCreate(SQLModel):
-    email: str = Field(unique=True, index=True)
-    name: str
-    is_active: bool = Field(default=True)
-    jira_account_id: Optional[str] = Field(default=None)
-    is_jira_linked: bool = Field(default=False)
-    is_system_user: bool = Field(default=True)  # Default to True for users who log in
-
-
-class UserCreateSSO(UserBase):
-    microsoft_id: str
-
-
-class UserRead(UserBase):
-    id: int
-    created_at: datetime
-    microsoft_id: Optional[str] = None
-
-
-class UserUpdate(SQLModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    is_active: Optional[bool] = None
-    is_jira_linked: Optional[bool] = None
-    avatar_url: Optional[str] = None  # User's avatar URL from Jira
+    project_history: List["UserProjectHistory"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"lazy": "noload"}
+    )
+    performance_records: List["UserPerformance"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )

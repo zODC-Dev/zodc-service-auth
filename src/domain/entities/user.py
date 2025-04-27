@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -27,14 +27,12 @@ class User(BaseEntity):
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = None
     avatar_url: Optional[str] = None  # User's avatar URL from Jira
-
-    # Microsoft tokens
-    microsoft_access_token: Optional[str] = None
-    microsoft_token_expires_at: Optional[datetime] = None
-
-    # Jira tokens
-    jira_access_token: Optional[str] = None
-    jira_token_expires_at: Optional[datetime] = None
+    # Profile data fields
+    profile_data: Optional[Dict[str, Any]] = None
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    phone_number: Optional[str] = None
+    joined_date: Optional[datetime] = None
 
 
 class UserCreate(BaseModel):
@@ -45,6 +43,11 @@ class UserCreate(BaseModel):
     is_jira_linked: bool = False
     is_system_user: bool = True  # Default to True for users who log in
     avatar_url: Optional[str] = None  # User's avatar URL from Jira
+    profile_data: Optional[Dict[str, Any]] = None
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    phone_number: Optional[str] = None
+    joined_date: Optional[datetime] = None
 
 
 class UserUpdate(BaseModel):
@@ -55,6 +58,19 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None  # User's avatar URL from Jira
     is_system_user: Optional[bool] = None
     updated_at: Optional[datetime] = None
+    profile_data: Optional[Dict[str, Any]] = None
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    phone_number: Optional[str] = None
+    joined_date: Optional[datetime] = None
+
+
+class UserProfileUpdate(BaseModel):
+    job_title: Optional[str] = None
+    location: Optional[str] = None
+    phone_number: Optional[str] = None
+    joined_date: Optional[datetime] = None
+    profile_data: Optional[Dict[str, Any]] = None
 
 
 class UserWithPassword(User):
