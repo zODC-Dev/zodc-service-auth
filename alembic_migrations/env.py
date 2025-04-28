@@ -17,7 +17,6 @@ from src.infrastructure.models.role_permission import RolePermission
 from src.infrastructure.models.project import Project
 from src.infrastructure.models.user_project_role import UserProjectRole
 from src.infrastructure.models.refresh_token import RefreshToken
-from src.infrastructure.models.user_project_history import UserProjectHistory
 from src.infrastructure.models.user_performance import UserPerformance
 
 # this is the Alembic Config object, which provides

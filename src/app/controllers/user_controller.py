@@ -8,12 +8,10 @@ from src.app.schemas.requests.user import (
     UpdateUserProfileRequest,
 )
 from src.app.schemas.responses.base import StandardResponse
-from src.app.schemas.responses.performance import PerformanceResponse
+from src.app.schemas.responses.performance import PerformanceResponse, ProjectPerformanceResponse
 from src.app.schemas.responses.project import ProjectAssigneeResponse
-from src.app.schemas.responses.project_history import ProjectHistoryResponse
 from src.app.schemas.responses.user import AdminUserResponse, UserWithProfileResponse
 from src.app.services.user_service import UserService
-from src.configs.logger import log
 from src.domain.entities.user import UserProfileUpdate
 from src.domain.entities.user_performance import UserPerformanceCreate, UserPerformanceUpdate
 from src.domain.exceptions.user_exceptions import UserNotFoundError
@@ -99,15 +97,11 @@ class UserController:
     async def get_user_profile(
         self,
         user_id: int,
-        include_project_history: bool = True,
-        include_performance: bool = True
     ) -> StandardResponse[UserWithProfileResponse]:
         """Get a user's complete profile
 
         Args:
             user_id: ID of the user to get profile for
-            include_project_history: Whether to include project history
-            include_performance: Whether to include performance records
 
         Returns:
             User profile information
@@ -127,36 +121,6 @@ class UserController:
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to retrieve user profile: {str(e)}"
-            ) from e
-
-    async def get_user_project_history(
-        self,
-        user_id: int
-    ) -> StandardResponse[List[ProjectHistoryResponse]]:
-        """Get a user's project history
-
-        Args:
-            user_id: ID of the user to get project history for
-
-        Returns:
-            List of project history entries
-        """
-        try:
-            history_entries = await self.user_service.get_user_project_history(user_id)
-            log.info(f"History entries: {history_entries}")
-            return StandardResponse(
-                message="User project history retrieved successfully",
-                data=[
-                    ProjectHistoryResponse.from_domain(entry)
-                    for entry in history_entries
-                ]
-            )
-        except UserNotFoundError as e:
-            raise HTTPException(status_code=404, detail=str(e)) from e
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to retrieve user project history: {str(e)}"
             ) from e
 
     async def get_user_performance(
@@ -197,6 +161,58 @@ class UserController:
                 detail=f"Failed to retrieve user performance: {str(e)}"
             ) from e
 
+    async def get_user_performance_by_project(
+        self,
+        user_id: int,
+        quarter: Optional[int] = None,
+        year: Optional[int] = None
+    ) -> StandardResponse[List[ProjectPerformanceResponse]]:
+        """Get a user's performance records grouped by project
+
+        Args:
+            user_id: ID of the user to get performance for
+            quarter: Optional quarter to filter by (1-4)
+            year: Optional year to filter by
+
+        Returns:
+            List of project performance records
+        """
+        try:
+            # Get performance records grouped by project
+            project_performances = await self.user_service.get_user_performance_by_project(
+                user_id,
+                quarter=quarter,
+                year=year
+            )
+
+            # Convert to response format
+            response_data = []
+            for project_id, project_data in project_performances.items():
+                project_name = project_data["name"]
+                project_key = project_data["key"]
+                performances = project_data["performances"]
+
+                response_data.append(
+                    ProjectPerformanceResponse.from_performances(
+                        project_id=project_id,
+                        project_name=project_name,
+                        project_key=project_key,
+                        performances=performances
+                    )
+                )
+
+            return StandardResponse(
+                message="User performance records retrieved successfully",
+                data=response_data
+            )
+        except UserNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to retrieve user performance: {str(e)}"
+            ) from e
+
     async def update_my_profile(
         self,
         user_id: int,
@@ -212,7 +228,8 @@ class UserController:
                     "primary_skills": request.primary_skills,
                     "secondary_skills": request.secondary_skills,
                     "education": request.education,
-                    "certifications": request.certifications
+                    "certifications": request.certifications,
+                    "professional_summary": request.professional_summary
                 }
             )
             user = await self.user_service.update_user_profile(user_id, profile_data)

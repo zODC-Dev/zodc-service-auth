@@ -8,7 +8,6 @@ from .user_project_role import UserProjectRole
 if TYPE_CHECKING:
     from .user import User
     from .user_performance import UserPerformance
-    from .user_project_history import UserProjectHistory
 
 
 class Project(BaseModelWithTimestamps, table=True):
@@ -37,10 +36,7 @@ class Project(BaseModelWithTimestamps, table=True):
             "overlaps": "users,projects"
         }
     )
-    user_history: List["UserProjectHistory"] = Relationship(
-        back_populates="project",
-        sa_relationship_kwargs={"lazy": "selectin"}
-    )
+
     performance_records: List["UserPerformance"] = Relationship(
         back_populates="project",
         sa_relationship_kwargs={"lazy": "selectin"}

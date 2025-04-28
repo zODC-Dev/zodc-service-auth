@@ -82,7 +82,6 @@ class SQLAlchemyUserPerformanceRepository(IUserPerformanceRepository):
             select(SQLModelUserPerformance)
             .where(and_(*conditions))
             .options(
-                selectinload(attr(SQLModelUserPerformance.user)),
                 selectinload(attr(SQLModelUserPerformance.project))
             )
         )
@@ -191,7 +190,20 @@ class SQLAlchemyUserPerformanceRepository(IUserPerformanceRepository):
             scores=db_performance.scores,
             data=db_performance.data,
             created_at=db_performance.created_at,
-            updated_at=db_performance.updated_at
+            updated_at=db_performance.updated_at,
         )
+
+        # Assign project if available
+        if db_performance.project:
+            from src.domain.entities.project import Project
+            performance.project = Project(
+                id=db_performance.project.id,
+                name=db_performance.project.name,
+                key=db_performance.project.key,
+                description=db_performance.project.description,
+                avatar_url=db_performance.project.avatar_url,
+                created_at=db_performance.project.created_at,
+                updated_at=db_performance.project.updated_at
+            )
 
         return performance

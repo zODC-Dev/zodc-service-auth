@@ -1,16 +1,13 @@
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
-from src.configs.logger import log
 from src.domain.entities.user import User, UserProfileUpdate
 from src.domain.entities.user_performance import UserPerformance, UserPerformanceCreate, UserPerformanceUpdate
-from src.domain.entities.user_project_history import UserProjectHistory
 from src.domain.exceptions.user_exceptions import (
     UserInactiveError,
     UserNotFoundError,
 )
 from src.domain.repositories.user_performance_repository import IUserPerformanceRepository
-from src.domain.repositories.user_project_history_repository import IUserProjectHistoryRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.redis_service import IRedisService
 
@@ -19,12 +16,10 @@ class UserService:
     def __init__(
         self,
         user_repository: IUserRepository,
-        user_project_history_repository: IUserProjectHistoryRepository,
         user_performance_repository: IUserPerformanceRepository,
         redis_service: IRedisService
     ):
         self.user_repository = user_repository
-        self.user_project_history_repository = user_project_history_repository
         self.user_performance_repository = user_performance_repository
         self.redis_service = redis_service
         self.cache_ttl = timedelta(minutes=5)
@@ -117,19 +112,6 @@ class UserService:
 
         return user
 
-    async def get_user_project_history(self, user_id: int) -> List[UserProjectHistory]:
-        """Get user's project history"""
-        # Check if user exists
-        user = await self.user_repository.get_user_by_id(user_id)
-        log.info(f"User: {user}")
-        if not user:
-            raise UserNotFoundError(f"User with id {user_id} not found")
-
-        # Get project history
-        raw_history = await self.user_project_history_repository.get_by_user_id(user_id)
-        log.info(f"Raw history: {raw_history}")
-        return raw_history
-
     async def get_user_performance(
         self,
         user_id: int,
@@ -210,3 +192,60 @@ class UserService:
         updated_performance = await self.user_performance_repository.update(performance_id, performance_data)
 
         return updated_performance
+
+    async def get_user_performance_by_project(
+        self,
+        user_id: int,
+        quarter: Optional[int] = None,
+        year: Optional[int] = None
+    ) -> Dict[int, Dict[str, Any]]:
+        """Get a user's performance records grouped by project
+
+        Args:
+            user_id: ID of the user to get performance for
+            quarter: Optional quarter to filter by (1-4)
+            year: Optional year to filter by
+
+        Returns:
+            Dictionary mapping project_id to project performance data
+        """
+        # Check if user exists
+        user = await self.user_repository.get_user_by_id(user_id)
+        if not user:
+            raise UserNotFoundError(f"User with id {user_id} not found")
+
+        # Get all performance records for the user
+        performance_records = await self.user_performance_repository.get_by_user_id(
+            user_id,
+            quarter=quarter,
+            year=year
+        )
+
+        # Group performances by project
+        project_performances: Dict[int, Dict[str, Any]] = {}
+
+        for performance in performance_records:
+            if not performance.project_id:
+                continue
+
+            project_id = performance.project_id
+
+            # Initialize project data if not exists
+            if project_id not in project_performances:
+                project_performances[project_id] = {
+                    "name": performance.project.name if performance.project else "Unknown Project",
+                    "key": performance.project.key if performance.project else "UNKNOWN",
+                    "performances": []
+                }
+
+            # Add performance to project
+            project_performances[project_id]["performances"].append(performance)
+
+        # Sort performances within each project by year and quarter (descending)
+        for project_id in project_performances:
+            project_performances[project_id]["performances"].sort(
+                key=lambda x: (x.year, x.quarter),
+                reverse=True
+            )
+
+        return project_performances

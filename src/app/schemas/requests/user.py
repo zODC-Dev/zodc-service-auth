@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -12,8 +12,9 @@ class UpdateUserProfileRequest(BaseModel):
     location: Optional[str] = Field(None, description="Location", alias="location")
     phone_number: Optional[str] = Field(None, description="Phone number", alias="phoneNumber")
     joined_date: Optional[str] = Field(None, description="Joined date", alias="joinedDate")
-    primary_skills: Optional[List[Dict[str, Any]]] = Field(None, description="List of primary skills")
-    secondary_skills: Optional[List[Dict[str, Any]]] = Field(None, description="List of secondary skills")
+    primary_skills: Optional[List[str]] = Field(None, description="List of primary skills")
+    secondary_skills: Optional[List[str]] = Field(None, description="List of secondary skills")
+    professional_summary: Optional[str] = Field(None, description="Professional summary", alias="professionalSummary")
     education: Optional[str] = Field(None, description="Education")
     certifications: Optional[str] = Field(None, description="Certifications")
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from src.app.schemas.responses.base import BaseResponse
 from src.domain.entities.user_performance import UserPerformance
@@ -21,6 +21,7 @@ class PerformanceResponse(BaseResponse):
     feedback: Optional[str] = None
     strengths: Optional[str] = None
     areas_for_improvement: Optional[str] = None
+    professional_summary: Optional[str] = None
 
     @classmethod
     def from_domain(cls, performance: UserPerformance) -> "PerformanceResponse":
@@ -32,7 +33,7 @@ class PerformanceResponse(BaseResponse):
         strengths = data.get("strengths", "")
         areas_for_improvement = data.get("areas_for_improvement", "")
         feedback = data.get("feedback", "")
-
+        professional_summary = data.get("professional_summary", "")
         return cls(
             id=performance.id,
             user_id=performance.user_id,
@@ -49,4 +50,23 @@ class PerformanceResponse(BaseResponse):
             feedback=feedback,
             strengths=strengths,
             areas_for_improvement=areas_for_improvement,
+            professional_summary=professional_summary,
+        )
+
+
+class ProjectPerformanceResponse(BaseResponse):
+    """Response schema for performance grouped by project"""
+    project_id: int
+    project_name: str
+    project_key: str
+    performances: List[PerformanceResponse]
+
+    @classmethod
+    def from_performances(cls, project_id: int, project_name: str, project_key: str, performances: List[UserPerformance]) -> "ProjectPerformanceResponse":
+        """Create a project performance response from a list of performances for the same project"""
+        return cls(
+            project_id=project_id,
+            project_name=project_name,
+            project_key=project_key,
+            performances=[PerformanceResponse.from_domain(p) for p in performances]
         )
