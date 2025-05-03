@@ -17,11 +17,11 @@ class UpdateUserProfileRequest(BaseModel):
     professional_summary: Optional[str] = Field(None, description="Professional summary", alias="professionalSummary")
     education: Optional[str] = Field(None, description="Education", alias="education")
     years_of_experience: Optional[str] = Field(None, description="Years of experience", alias="yearsOfExperience")
-    certifications: Optional[str] = Field(None, description="Certifications", alias="certifications")
+    certification: Optional[str] = Field(None, description="Certifications", alias="certification")
 
 
 class CreateUserPerformanceRequest(BaseModel):
-    project_id: int = Field(..., description="Project ID", alias="projectId")
+    project_key: str = Field(..., description="Project Key", alias="projectKey")
     quarter: int = Field(..., description="Quarter (1-4)", ge=1, le=4)
     year: int = Field(..., description="Year")
     overall: float = Field(..., description="Overall performance score", ge=0, le=5)

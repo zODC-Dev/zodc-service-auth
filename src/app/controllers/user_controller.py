@@ -228,7 +228,7 @@ class UserController:
                     "primary_skills": request.primary_skills,
                     "secondary_skills": request.secondary_skills,
                     "education": request.education,
-                    "certifications": request.certifications,
+                    "certification": request.certification,
                     "professional_summary": request.professional_summary,
                     "years_of_experience": request.years_of_experience
                 }
@@ -262,7 +262,7 @@ class UserController:
             # Create performance record
             performance_data = UserPerformanceCreate(
                 user_id=user_id,
-                project_id=request.project_id,
+                project_key=request.project_key,
                 quarter=request.quarter,
                 year=request.year,
                 overall=request.overall,
