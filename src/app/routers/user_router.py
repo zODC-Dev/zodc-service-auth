@@ -77,7 +77,7 @@ async def get_my_performance(
     return await user_controller.get_user_performance_by_project(current_user_id, quarter=quarter, year=year)
 
 
-@router.get("/{user_id}/performance", response_model=StandardResponse[List[PerformanceResponse]])
+@router.get("/{user_id}/performance", response_model=StandardResponse[List[ProjectPerformanceResponse]])
 async def get_user_performance(
     user_id: int,
     quarter: Optional[int] = Query(None, description="Filter by quarter (1-4)"),
@@ -85,7 +85,7 @@ async def get_user_performance(
     user_controller: UserController = Depends(get_user_controller)
 ):
     """Get performance records for a specific user"""
-    return await user_controller.get_user_performance(user_id, quarter=quarter, year=year)
+    return await user_controller.get_user_performance_by_project(user_id, quarter=quarter, year=year)
 
 
 @router.get("/assignees", response_model=StandardResponse[List[ProjectAssigneeResponse]])
