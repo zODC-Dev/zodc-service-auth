@@ -12,11 +12,12 @@ class UpdateUserProfileRequest(BaseModel):
     location: Optional[str] = Field(None, description="Location", alias="location")
     phone_number: Optional[str] = Field(None, description="Phone number", alias="phoneNumber")
     joined_date: Optional[str] = Field(None, description="Joined date", alias="joinedDate")
-    primary_skills: Optional[List[str]] = Field(None, description="List of primary skills")
-    secondary_skills: Optional[List[str]] = Field(None, description="List of secondary skills")
+    primary_skills: Optional[List[str]] = Field(None, description="List of primary skills", alias="primarySkills")
+    secondary_skills: Optional[List[str]] = Field(None, description="List of secondary skills", alias="secondarySkills")
     professional_summary: Optional[str] = Field(None, description="Professional summary", alias="professionalSummary")
-    education: Optional[str] = Field(None, description="Education")
-    certifications: Optional[str] = Field(None, description="Certifications")
+    education: Optional[str] = Field(None, description="Education", alias="education")
+    years_of_experience: Optional[str] = Field(None, description="Years of experience", alias="yearsOfExperience")
+    certifications: Optional[str] = Field(None, description="Certifications", alias="certifications")
 
 
 class CreateUserPerformanceRequest(BaseModel):

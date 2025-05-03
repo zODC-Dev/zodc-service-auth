@@ -229,7 +229,8 @@ class UserController:
                     "secondary_skills": request.secondary_skills,
                     "education": request.education,
                     "certifications": request.certifications,
-                    "professional_summary": request.professional_summary
+                    "professional_summary": request.professional_summary,
+                    "years_of_experience": request.years_of_experience
                 }
             )
             user = await self.user_service.update_user_profile(user_id, profile_data)
