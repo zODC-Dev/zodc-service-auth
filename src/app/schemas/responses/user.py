@@ -33,8 +33,9 @@ class UserWithProfileResponse(BaseResponse):
     primary_skills: List[Any] = []
     secondary_skills: List[Any] = []
     education: str = ''
-    certifications: str = ''
+    certification: str = ''
     professional_summary: Optional[str] = None
+    years_of_experience: str = ''
 
     @classmethod
     def from_domain(cls, user: User) -> "UserWithProfileResponse":
@@ -75,8 +76,9 @@ class UserWithProfileResponse(BaseResponse):
         primary_skills = []
         secondary_skills = []
         education = ''
-        certifications = ''
+        certification = ''
         professional_summary = ''
+        years_of_experience = ''
         # Parse skills
         if profile_data.get("primary_skills"):
             primary_skills = profile_data.get("primary_skills", [])
@@ -88,13 +90,17 @@ class UserWithProfileResponse(BaseResponse):
         if profile_data.get("education"):
             education = profile_data.get("education", '')
 
-        # Parse certifications
-        if profile_data.get("certifications"):
-            certifications = profile_data.get("certifications", '')
+        # Parse certification
+        if profile_data.get("certification"):
+            certification = profile_data.get("certification", '')
 
         # Parse professional summary
         if profile_data.get("professional_summary"):
             professional_summary = profile_data.get("professional_summary", '')
+
+        # Parse years of experience
+        if profile_data.get("years_of_experience"):
+            years_of_experience = profile_data.get("years_of_experience", '')
 
         return cls(
             id=user.id,
@@ -117,8 +123,9 @@ class UserWithProfileResponse(BaseResponse):
             primary_skills=primary_skills,
             secondary_skills=secondary_skills,
             education=education,
-            certifications=certifications,
-            professional_summary=professional_summary
+            certification=certification,
+            professional_summary=professional_summary,
+            years_of_experience=years_of_experience
         )
 
 

@@ -228,7 +228,7 @@ class UserController:
                     "primary_skills": request.primary_skills,
                     "secondary_skills": request.secondary_skills,
                     "education": request.education,
-                    "certifications": request.certifications,
+                    "certification": request.certification,
                     "professional_summary": request.professional_summary,
                     "years_of_experience": request.years_of_experience
                 }

@@ -17,7 +17,7 @@ class UpdateUserProfileRequest(BaseModel):
     professional_summary: Optional[str] = Field(None, description="Professional summary", alias="professionalSummary")
     education: Optional[str] = Field(None, description="Education", alias="education")
     years_of_experience: Optional[str] = Field(None, description="Years of experience", alias="yearsOfExperience")
-    certifications: Optional[str] = Field(None, description="Certifications", alias="certifications")
+    certification: Optional[str] = Field(None, description="Certifications", alias="certification")
 
 
 class CreateUserPerformanceRequest(BaseModel):
