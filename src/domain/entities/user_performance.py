@@ -30,7 +30,7 @@ class UserPerformance(BaseEntity):
 
 class UserPerformanceCreate(BaseModel):
     user_id: int
-    project_id: Optional[int] = None
+    project_key: Optional[str] = None
     quarter: int
     year: int
     completion_date: Optional[datetime] = None

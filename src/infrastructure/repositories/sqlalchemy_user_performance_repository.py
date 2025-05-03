@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.user_performance import UserPerformance, UserPerformanceCreate, UserPerformanceUpdate
 from src.domain.repositories.user_performance_repository import IUserPerformanceRepository
+from src.infrastructure.models.project import Project as SQLModelProject
 from src.infrastructure.models.user_performance import (
     UserPerformance as SQLModelUserPerformance,
 )
@@ -18,9 +19,15 @@ class SQLAlchemyUserPerformanceRepository(IUserPerformanceRepository):
 
     async def create(self, performance: UserPerformanceCreate) -> UserPerformance:
         """Create a new performance record for a user"""
+        project_result = await self.session.exec(select(SQLModelProject).where(col(SQLModelProject.key) == performance.project_key))
+        project = project_result.one_or_none()
+
+        if project is None:
+            raise ValueError(f"Project with key {performance.project_key} not found")
+
         db_performance = SQLModelUserPerformance(
             user_id=performance.user_id,
-            project_id=performance.project_id,
+            project_id=project.id,
             quarter=performance.quarter,
             year=performance.year,
             completion_date=performance.completion_date,

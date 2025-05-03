@@ -21,7 +21,7 @@ class UpdateUserProfileRequest(BaseModel):
 
 
 class CreateUserPerformanceRequest(BaseModel):
-    project_id: int = Field(..., description="Project ID", alias="projectId")
+    project_key: str = Field(..., description="Project Key", alias="projectKey")
     quarter: int = Field(..., description="Quarter (1-4)", ge=1, le=4)
     year: int = Field(..., description="Year")
     overall: float = Field(..., description="Overall performance score", ge=0, le=5)

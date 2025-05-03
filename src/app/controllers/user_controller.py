@@ -262,7 +262,7 @@ class UserController:
             # Create performance record
             performance_data = UserPerformanceCreate(
                 user_id=user_id,
-                project_id=request.project_id,
+                project_key=request.project_key,
                 quarter=request.quarter,
                 year=request.year,
                 overall=request.overall,
