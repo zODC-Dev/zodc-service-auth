@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from .project import Project
     from .role import Role
     from .user_performance import UserPerformance
-    from .user_project_history import UserProjectHistory
 
 
 class UserBase(SQLModel):
@@ -64,10 +63,7 @@ class User(BaseModelWithTimestamps, table=True):
             "overlaps": "projects,users"
         }
     )
-    project_history: List["UserProjectHistory"] = Relationship(
-        back_populates="user",
-        sa_relationship_kwargs={"lazy": "noload"}
-    )
+
     performance_records: List["UserPerformance"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"lazy": "selectin"}

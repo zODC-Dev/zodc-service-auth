@@ -6,7 +6,6 @@ from .role import Role
 from .role_permission import RolePermission
 from .user import User
 from .user_performance import UserPerformance
-from .user_project_history import UserProjectHistory
 from .user_project_role import UserProjectRole
 
 # Update forward references
@@ -18,6 +17,5 @@ Project.model_rebuild()
 Role.model_rebuild()
 User.model_rebuild()
 UserProjectRole.model_rebuild()
-UserProjectHistory.model_rebuild()
 UserPerformance.model_rebuild()
 RolePermission.model_rebuild()

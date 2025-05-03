@@ -15,9 +15,8 @@ from src.app.schemas.requests.user import (
     UpdateUserProfileRequest,
 )
 from src.app.schemas.responses.base import StandardResponse
-from src.app.schemas.responses.performance import PerformanceResponse
+from src.app.schemas.responses.performance import PerformanceResponse, ProjectPerformanceResponse
 from src.app.schemas.responses.project import ProjectAssigneeResponse, ProjectResponse
-from src.app.schemas.responses.project_history import ProjectHistoryResponse
 from src.app.schemas.responses.user import AdminUserResponse, UserResponse, UserWithProfileResponse
 from src.app.utils.response_wrapper import wrap_response
 
@@ -64,17 +63,7 @@ async def get_my_projects(
     return await controller.get_user_projects(current_user_id)
 
 
-@router.get("/me/projects/profile", response_model=StandardResponse[List[ProjectHistoryResponse]])
-async def get_my_project_profile(
-    claims: JWTClaims = Depends(get_jwt_claims),
-    user_controller: UserController = Depends(get_user_controller)
-):
-    """Get project history for the current user"""
-    user_id = int(claims.sub)
-    return await user_controller.get_user_project_history(user_id)
-
-
-@router.get("/me/performance", response_model=StandardResponse[List[PerformanceResponse]])
+@router.get("/me/performance", response_model=StandardResponse[List[ProjectPerformanceResponse]])
 async def get_my_performance(
     current_user: CurrentUser,
     quarter: Optional[int] = Query(None, description="Filter by quarter (1-4)"),
@@ -85,7 +74,18 @@ async def get_my_performance(
     current_user_id = current_user.id
     if current_user_id is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    return await user_controller.get_user_performance(current_user_id, quarter=quarter, year=year)
+    return await user_controller.get_user_performance_by_project(current_user_id, quarter=quarter, year=year)
+
+
+@router.get("/{user_id}/performance", response_model=StandardResponse[List[ProjectPerformanceResponse]])
+async def get_user_performance(
+    user_id: int,
+    quarter: Optional[int] = Query(None, description="Filter by quarter (1-4)"),
+    year: Optional[int] = Query(None, description="Filter by year"),
+    user_controller: UserController = Depends(get_user_controller)
+):
+    """Get performance records for a specific user"""
+    return await user_controller.get_user_performance(user_id, quarter=quarter, year=year)
 
 
 @router.get("/assignees", response_model=StandardResponse[List[ProjectAssigneeResponse]])
@@ -143,15 +143,11 @@ async def get_users_for_admin(
 @router.get("/{user_id}/profile", response_model=StandardResponse[UserWithProfileResponse])
 async def get_user_profile(
     user_id: int,
-    include_project_history: bool = Query(True, description="Include project history"),
-    include_performance: bool = Query(True, description="Include performance records"),
     user_controller: UserController = Depends(get_user_controller)
 ):
     """Get a user's complete profile information by ID (admin access)"""
     return await user_controller.get_user_profile(
-        user_id,
-        include_project_history=include_project_history,
-        include_performance=include_performance
+        user_id
     )
 
 

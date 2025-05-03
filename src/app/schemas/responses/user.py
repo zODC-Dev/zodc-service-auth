@@ -34,6 +34,7 @@ class UserWithProfileResponse(BaseResponse):
     secondary_skills: List[Any] = []
     education: str = ''
     certifications: str = ''
+    professional_summary: Optional[str] = None
 
     @classmethod
     def from_domain(cls, user: User) -> "UserWithProfileResponse":
@@ -75,7 +76,7 @@ class UserWithProfileResponse(BaseResponse):
         secondary_skills = []
         education = ''
         certifications = ''
-
+        professional_summary = ''
         # Parse skills
         if profile_data.get("primary_skills"):
             primary_skills = profile_data.get("primary_skills", [])
@@ -90,6 +91,10 @@ class UserWithProfileResponse(BaseResponse):
         # Parse certifications
         if profile_data.get("certifications"):
             certifications = profile_data.get("certifications", '')
+
+        # Parse professional summary
+        if profile_data.get("professional_summary"):
+            professional_summary = profile_data.get("professional_summary", '')
 
         return cls(
             id=user.id,
@@ -112,7 +117,8 @@ class UserWithProfileResponse(BaseResponse):
             primary_skills=primary_skills,
             secondary_skills=secondary_skills,
             education=education,
-            certifications=certifications
+            certifications=certifications,
+            professional_summary=professional_summary
         )
 
 
