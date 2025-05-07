@@ -395,9 +395,8 @@ class SQLAlchemyRoleRepository(IRoleRepository):
                     col(RolePermission.role_id) == role_id
                 )
                 result = await self.session.exec(delete_query)
-                obj_to_delete = result.first()
-                if obj_to_delete:
-                    await self.session.delete(obj_to_delete)
+                for obj in result.all():
+                    await self.session.delete(obj)
 
                 # Create new role permissions
                 role_permissions = [
