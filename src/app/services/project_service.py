@@ -118,7 +118,7 @@ class ProjectService:
             reply_data = await self.nats_service.request(
                 NATSPublishTopic.JIRA_PROJECT_SYNC.value,
                 sync_request.model_dump(mode='json', exclude=None),
-                timeout=60
+                timeout=300
             )
 
             # Process reply data
