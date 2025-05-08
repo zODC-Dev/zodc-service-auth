@@ -85,7 +85,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         project_repository,
         role_repository,
         user_repository,
-        nats_service
+        nats_service,
+        redis_service
     )
 
     # Start subscribers
