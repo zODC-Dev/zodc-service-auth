@@ -23,6 +23,7 @@ from src.domain.repositories.project_repository import IProjectRepository
 from src.domain.repositories.role_repository import IRoleRepository
 from src.domain.repositories.user_repository import IUserRepository
 from src.domain.services.nats_service import INATSService
+from src.domain.services.redis_service import IRedisService
 
 
 class ProjectService:
@@ -31,12 +32,14 @@ class ProjectService:
         project_repository: IProjectRepository,
         role_repository: IRoleRepository,
         user_repository: IUserRepository,
-        nats_service: INATSService
+        nats_service: INATSService,
+        redis_service: IRedisService
     ):
         self.project_repository = project_repository
         self.role_repository = role_repository
         self.user_repository = user_repository
         self.nats_service = nats_service
+        self.redis_service = redis_service
 
     async def create_project(self, project_data: ProjectCreate) -> Project:
         existing_project = await self.project_repository.get_project_by_key(project_data.key)
@@ -101,6 +104,10 @@ class ProjectService:
             project_id=new_project.id,
             role_name=ProjectRoles.PROJECT_PRODUCT_OWNER.value
         )
+
+        # Since we update the role of the user, we need to delete the user cache in redis
+        await self.redis_service.delete(f"user:{current_user_id}")
+        await self.redis_service.delete(f"permissions:user:{current_user_id}")
 
         # Create Jira project sync request DTO
         sync_request = JiraProjectSyncNATSRequestDTO(
